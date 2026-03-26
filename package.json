@@ -1,0 +1,13 @@
+{
+  "name": "vibe-transcription",
+  "private": true,
+  "scripts": {
+    "dev": "bunx serve src -l tcp://127.0.0.1:8000",
+    "test": "npx playwright test --project=fast",
+    "test:slow": "npx playwright test --project=slow",
+    "test:all": "npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
