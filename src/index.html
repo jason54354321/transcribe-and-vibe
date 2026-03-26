@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Transcription</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+    <style>
+        :root {
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #0066cc;
+            --accent-light: #e6f0fa;
+            --border-color: #e5e5e5;
+            --secondary-text: #666666;
+            --error-color: #d93025;
+            --success-color: #188038;
+            --radius: 8px;
+            --spacing-unit: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-stack);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            padding: calc(var(--spacing-unit) * 2);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 100px;
+        }
+
+        header {
+            margin-bottom: calc(var(--spacing-unit) * 3);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--secondary-text);
+            font-size: 14px;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius);
+            padding: calc(var(--spacing-unit) * 4);
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .drop-zone.drag-over {
+            border-color: var(--accent-color);
+            background-color: var(--accent-light);
+        }
+
+        .drop-zone p {
+            margin-bottom: var(--spacing-unit);
+            color: var(--secondary-text);
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--text-color);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Audio Player */
+        .audio-container {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: var(--spacing-unit) 0;
+            border-bottom: 1px solid transparent;
+            z-index: 100;
+            transition: border-color 0.2s;
+            display: none;
+        }
+
+        .audio-container.stuck {
+            border-bottom-color: var(--border-color);
+        }
+
+        audio {
+            width: 100%;
+            border-radius: 40px;
+            outline: none;
+        }
+
+        /* Status & Progress */
+        .status-container {
+            text-align: center;
+            margin: calc(var(--spacing-unit) * 3) 0;
+            display: none;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            color: var(--secondary-text);
+            font-size: 14px;
+        }
+
+        /* Transcript */
+        .transcript-container {
+            margin-top: calc(var(--spacing-unit) * 2);
+            display: none;
+        }
+
+        .meta-info {
+            font-size: 13px;
+            color: var(--secondary-text);
+            margin-bottom: var(--spacing-unit);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .transcript-content {
+            font-size: 18px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .transcript-content p {
+            margin-bottom: var(--spacing-unit);
+        }
+
+        .word {
+            cursor: pointer;
+            padding: 2px 0;
+            border-radius: 3px;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+        .word:hover {
+            background-color: #f0f0f0;
+            color: #000;
+        }
+
+        .word.active {
+            background-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        /* Error */
+        .error-container {
+            background-color: #fce8e6;
+            color: var(--error-color);
+            padding: var(--spacing-unit);
+            border-radius: var(--radius);
+            margin-bottom: var(--spacing-unit);
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: var(--spacing-unit);
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+
+            .transcript-content {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Vibe Transcription</h1>
+        <div class="subtitle">Local, private, in-browser audio transcription</div>
+    </header>
+
+    <div id="error-container" class="error-container"></div>
+
+    <div id="drop-zone" class="drop-zone">
+        <p>Drag & drop audio file here<br><span style="font-size: 12px; opacity: 0.7">(mp3, wav, m4a, ogg • Max 100MB)</span></p>
+        <div class="btn">Select File</div>
+        <input type="file" id="file-input" hidden accept="audio/mpeg,audio/wav,audio/x-m4a,audio/ogg,audio/mp4">
+    </div>
+
+    <div id="status-container" class="status-container">
+        <div class="spinner"></div>
+        <div id="status-text" class="status-text">Ready</div>
+    </div>
+
+    <div id="audio-container" class="audio-container">
+        <audio id="audio-player" controls></audio>
+    </div>
+
+    <div id="transcript-container" class="transcript-container">
+        <div id="meta-info" class="meta-info"></div>
+        <div id="transcript-content" class="transcript-content"></div>
+    </div>
+</div>
+
+<script type="module">
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
+    const VALID_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/ogg', 'audio/mp4', 'audio/x-wav', 'audio/aac'];
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const audioContainer = document.getElementById('audio-container');
+    const audioPlayer = document.getElementById('audio-player');
+    const statusContainer = document.getElementById('status-container');
+    const statusText = document.getElementById('status-text');
+    const transcriptContainer = document.getElementById('transcript-container');
+    const transcriptContent = document.getElementById('transcript-content');
+    const metaInfo = document.getElementById('meta-info');
+    const errorContainer = document.getElementById('error-container');
+
+    let worker = null;
+    let wordSpans = [];
+
+    try {
+        worker = new Worker('worker.js', { type: 'module' });
+        
+        worker.onmessage = (e) => {
+            const { type, status, data, message } = e.data;
+
+            if (type === 'progress') {
+                updateStatus(status);
+            } else if (type === 'result') {
+                handleResult(data);
+            } else if (type === 'error') {
+                showError(message);
+                resetUI();
+            }
+        };
+    } catch (err) {
+        showError("Failed to initialize worker. Please ensure worker.js is present.");
+    }
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+        fileInput.value = '';
+    });
+
+    audioPlayer.addEventListener('timeupdate', updateActiveWord);
+
+    transcriptContent.addEventListener('click', (e) => {
+        const span = e.target.closest('.word');
+        if (span && span.dataset.start) {
+            const timeInSeconds = parseInt(span.dataset.start) / 1000;
+            audioPlayer.currentTime = timeInSeconds;
+            audioPlayer.play();
+        }
+    });
+
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 0) {
+            audioContainer.classList.add('stuck');
+        } else {
+            audioContainer.classList.remove('stuck');
+        }
+    });
+
+    function handleFile(file) {
+        if (!VALID_TYPES.includes(file.type) && !file.type.startsWith('audio/')) {
+            showError(`Invalid file type: ${file.type}. Please upload audio.`);
+            return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            showError("File too large. Maximum size is 100MB.");
+            return;
+        }
+
+        errorContainer.style.display = 'none';
+        dropZone.style.display = 'none';
+        statusContainer.style.display = 'block';
+        updateStatus("Reading file...");
+
+        const url = URL.createObjectURL(file);
+        audioPlayer.src = url;
+        audioContainer.style.display = 'block';
+
+        const fileReader = new FileReader();
+        fileReader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                await processAudio(arrayBuffer);
+            } catch (err) {
+                showError("Error processing audio file: " + err.message);
+                resetUI();
+            }
+        };
+        fileReader.onerror = () => {
+            showError("Failed to read file.");
+            resetUI();
+        };
+        fileReader.readAsArrayBuffer(file);
+    }
+
+    async function processAudio(arrayBuffer) {
+        updateStatus("Decoding audio (resampling to 16kHz)...");
+
+        const audioContext = new AudioContext({ sampleRate: 16000 });
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const audioData = audioBuffer.getChannelData(0);
+
+        updateStatus("Sending to worker...");
+        worker.postMessage({ type: 'transcribe', audio: audioData });
+
+        audioContext.close();
+    }
+
+    function updateStatus(text) {
+        statusText.textContent = text;
+    }
+
+    function handleResult(data) {
+        statusContainer.style.display = 'none';
+        transcriptContainer.style.display = 'block';
+        
+        const { text, chunks } = data;
+
+        const wordCount = chunks.filter(c => c.timestamp[0] !== null).length;
+        const durationSec = chunks.length > 0 ? chunks[chunks.length - 1].timestamp[1] : 0;
+        const durationStr = durationSec ? `${Math.floor(durationSec / 60)}m ${Math.floor(durationSec % 60)}s` : '';
+        metaInfo.textContent = `${wordCount} words${durationStr ? ' · ' + durationStr : ''}`;
+
+        transcriptContent.innerHTML = '';
+        wordSpans = [];
+
+        let currentParagraph = document.createElement('p');
+        let lastEndTime = 0;
+
+        chunks.forEach((chunk, index) => {
+            const startSec = chunk.timestamp[0];
+            const endSec = chunk.timestamp[1];
+            
+            if (startSec === null || endSec === null) return;
+
+            const startMs = Math.round(startSec * 1000);
+            const endMs = Math.round(endSec * 1000);
+
+            if (index > 0 && (startSec - lastEndTime > 0.8)) {
+                transcriptContent.appendChild(currentParagraph);
+                currentParagraph = document.createElement('p');
+            }
+
+            const span = document.createElement('span');
+            span.textContent = chunk.text;
+            span.className = 'word';
+            span.dataset.start = startMs;
+            span.dataset.end = endMs;
+            span.title = `${formatTime(startSec)} - ${formatTime(endSec)}`;
+
+            currentParagraph.appendChild(span);
+
+            wordSpans.push({
+                start: startMs,
+                end: endMs,
+                el: span
+            });
+
+            lastEndTime = endSec;
+        });
+
+        if (currentParagraph.hasChildNodes()) {
+            transcriptContent.appendChild(currentParagraph);
+        }
+    }
+
+    function updateActiveWord() {
+        if (wordSpans.length === 0) return;
+
+        const currentTimeMs = Math.round(audioPlayer.currentTime * 1000);
+
+        let low = 0;
+        let high = wordSpans.length - 1;
+        let activeIndex = -1;
+
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            const word = wordSpans[mid];
+
+            if (currentTimeMs >= word.start && currentTimeMs < word.end) {
+                activeIndex = mid;
+                break;
+            } else if (currentTimeMs < word.start) {
+                high = mid - 1;
+            } else {
+                low = mid + 1;
+            }
+        }
+
+        const previousActive = document.querySelector('.word.active');
+        if (previousActive) {
+            previousActive.classList.remove('active');
+        }
+
+        if (activeIndex !== -1) {
+            wordSpans[activeIndex].el.classList.add('active');
+        }
+    }
+
+    function showError(msg) {
+        errorContainer.textContent = msg;
+        errorContainer.style.display = 'block';
+    }
+
+    function resetUI() {
+        dropZone.style.display = 'block';
+        statusContainer.style.display = 'none';
+    }
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+
+</script>
+
+</body>
+</html>
