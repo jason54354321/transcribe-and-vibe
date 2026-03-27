@@ -168,7 +168,7 @@ test.describe('Vibe Transcription - Fast Loop', () => {
 
       const dlProgress = page.locator('#download-progress');
       await expect(dlProgress).toBeVisible({ timeout: 3000 });
-      await expect(dlProgress).toContainText('encoder_model_fp16.onnx');
+      await expect(dlProgress).toContainText('encoder_model_quantized.onnx');
       await expect(dlProgress).toContainText('MB');
     });
 

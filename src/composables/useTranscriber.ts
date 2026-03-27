@@ -76,7 +76,7 @@ export function useTranscriber() {
     }
   })
 
-  const transcribe = (audio: Float32Array) => {
+  const transcribe = (audio: Float32Array, model: string, dtype: string) => {
     if (!worker) {
       error.value = "Worker not initialized"
       return
@@ -88,7 +88,7 @@ export function useTranscriber() {
     downloadProgress.value = {}
     status.value = "Sending to worker..."
     
-    worker.postMessage({ type: 'transcribe', audio })
+    worker.postMessage({ type: 'transcribe', audio, model, dtype })
   }
 
   const resetError = () => {

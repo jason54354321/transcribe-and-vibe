@@ -4,12 +4,17 @@ import DropZone from './components/DropZone.vue'
 import StatusBar from './components/StatusBar.vue'
 import AudioPlayer from './components/AudioPlayer.vue'
 import TranscriptView from './components/TranscriptView.vue'
+import ModelSelector from './components/ModelSelector.vue'
+import { DEFAULT_MODEL, DEFAULT_DTYPE } from './models'
 import { useTranscriber } from './composables/useTranscriber'
 import { useFileUpload } from './composables/useFileUpload'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
 
 const { status, result, error, isProcessing, modelInfo, downloadProgress, transcribe, resetError } = useTranscriber()
 const { handleFile } = useFileUpload()
+
+const selectedModel = ref(DEFAULT_MODEL)
+const selectedDtype = ref(DEFAULT_DTYPE)
 
 const audioUrl = ref('')
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
@@ -40,7 +45,7 @@ const onFileSelected = async (file: File) => {
   try {
     const { audioUrl: url, audioData } = await handleFile(file)
     audioUrl.value = url
-    transcribe(audioData)
+    transcribe(audioData, selectedModel.value, selectedDtype.value)
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
@@ -69,6 +74,11 @@ onUnmounted(() => {
     <header>
       <h1>Vibe Transcription</h1>
       <div class="subtitle">Local, private, in-browser audio transcription</div>
+      <ModelSelector
+        v-model:model-id="selectedModel"
+        v-model:dtype="selectedDtype"
+        :disabled="isProcessing"
+      />
     </header>
 
     <div v-show="displayError" id="error-container" class="error-container">

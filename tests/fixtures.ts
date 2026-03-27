@@ -5,7 +5,7 @@ import path from 'path';
 declare const __dirname: string;
 
 export const MOCK_MODEL_ID = 'onnx-community/whisper-small_timestamped';
-export const MOCK_DTYPE = 'fp16';
+export const MOCK_DTYPE = 'q8';
 
 export const MOCK_CHUNKS = [
   { text: ' Hello', timestamp: [0.0, 0.42] },
@@ -42,16 +42,18 @@ function sleep(ms) {
 }
 
 self.addEventListener('message', async (event) => {
-  const { type } = event.data ?? {};
+  const { type, model, dtype } = event.data ?? {};
   if (type !== 'transcribe') return;
 
-  self.postMessage({ type: 'model-info', model: MODEL_ID, dtype: DTYPE });
+  const usedModel = model || MODEL_ID;
+  const usedDtype = dtype || DTYPE;
+  self.postMessage({ type: 'model-info', model: usedModel, dtype: usedDtype });
   self.postMessage({ type: 'progress', status: 'Loading model…' });
 
   if (${JSON.stringify(downloadDelay)} > 0) {
-    self.postMessage({ type: 'download-progress', file: 'onnx/encoder_model_fp16.onnx', progress: 50, loaded: 92274688, total: 184549376 });
+    self.postMessage({ type: 'download-progress', file: 'onnx/encoder_model_quantized.onnx', progress: 50, loaded: 92274688, total: 184549376 });
     await sleep(${JSON.stringify(downloadDelay)} / 2);
-    self.postMessage({ type: 'download-progress', file: 'onnx/encoder_model_fp16.onnx', progress: 100, loaded: 184549376, total: 184549376 });
+    self.postMessage({ type: 'download-progress', file: 'onnx/encoder_model_quantized.onnx', progress: 100, loaded: 184549376, total: 184549376 });
     await sleep(${JSON.stringify(downloadDelay)} / 2);
   }
 
