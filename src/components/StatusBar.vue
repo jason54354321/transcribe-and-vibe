@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import type { ModelInfo, DownloadProgress } from '../composables/useTranscriber'
 
 const props = defineProps<{
@@ -7,6 +7,50 @@ const props = defineProps<{
   modelInfo?: ModelInfo | null
   downloadProgress?: Record<string, DownloadProgress>
 }>()
+
+const FILLER_MESSAGES = [
+  'Extracting audio features…',
+  'Decoding speech patterns…',
+  'Analyzing sentence structure…',
+  'Recognizing vocabulary…',
+  'Optimizing text output…',
+  'Aligning timestamps…',
+  'Processing audio segments…',
+  'Matching language model…',
+  'Converting speech signals…',
+  'Assembling transcription…',
+]
+
+const fillerIndex = ref(0)
+let fillerTimer: ReturnType<typeof setInterval> | null = null
+
+const isTranscribing = computed(() => props.status === 'Transcribing…')
+
+const subStatus = computed(() => {
+  if (!isTranscribing.value) return null
+  return FILLER_MESSAGES[fillerIndex.value % FILLER_MESSAGES.length]
+})
+
+watch(isTranscribing, (active) => {
+  if (active) {
+    fillerIndex.value = 0
+    fillerTimer = setInterval(() => {
+      fillerIndex.value++
+    }, 3000)
+  } else {
+    if (fillerTimer) {
+      clearInterval(fillerTimer)
+      fillerTimer = null
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (fillerTimer) {
+    clearInterval(fillerTimer)
+    fillerTimer = null
+  }
+})
 
 const modelLabel = computed(() => {
   if (!props.modelInfo) return null
@@ -41,6 +85,9 @@ function formatSize(dp: DownloadProgress) {
       <div class="indeterminate-bar"></div>
     </div>
     <div id="status-text" class="status-text">{{ status }}</div>
+    <transition name="fade" mode="out-in">
+      <div v-if="subStatus" :key="subStatus" class="sub-status">{{ subStatus }}</div>
+    </transition>
 
     <div v-if="showDownload" id="download-progress" class="progress-section">
       <div
@@ -105,6 +152,23 @@ function formatSize(dp: DownloadProgress) {
 .status-text {
   color: var(--secondary-text);
   font-size: 14px;
+}
+
+.sub-status {
+  color: var(--secondary-text);
+  font-size: 13px;
+  margin-top: 6px;
+  opacity: 0.7;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .progress-section {
