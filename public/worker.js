@@ -3,25 +3,44 @@
  *
  * Inbound:  { type: 'transcribe', audio: Float32Array }
  * Outbound: { type: 'progress', status: string }
- *           { type: 'result',   data: { text, chunks, language } }
+ *           { type: 'model-info', model: string, dtype: string }
+ *           { type: 'download-progress', file: string, progress: number, loaded: number, total: number }
+ *           { type: 'result',   data: { text, chunks } }
  *           { type: 'error',    message: string }
  */
 
 import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+
+const MODEL_ID = 'onnx-community/whisper-small_timestamped';
+const DTYPE = 'q8';
+const CHUNK_LENGTH_S = 30;
+const STRIDE_LENGTH_S = 5;
 
 let transcriber = null;
 
 async function getPipeline() {
   if (transcriber) return transcriber;
 
-  postMessage({ type: 'progress', status: 'Loading model… (first time downloads ~150 MB)' });
+  postMessage({ type: 'model-info', model: MODEL_ID, dtype: DTYPE });
+  postMessage({ type: 'progress', status: 'Loading model…' });
 
   transcriber = await pipeline(
     'automatic-speech-recognition',
-    'onnx-community/whisper-base_timestamped',
+    MODEL_ID,
     {
-      dtype: 'q8',              // quantised — smaller + faster on CPU
-      device: 'wasm',           // explicit WASM; auto would try WebGPU first
+      dtype: DTYPE,
+      device: 'wasm',
+      progress_callback: (event) => {
+        if (event.status === 'progress' && event.file) {
+          postMessage({
+            type: 'download-progress',
+            file: event.file,
+            progress: Math.round(event.progress ?? 0),
+            loaded: event.loaded ?? 0,
+            total: event.total ?? 0,
+          });
+        }
+      },
     },
   );
 
@@ -36,13 +55,13 @@ async function transcribe(audio) {
 
   const result = await pipe(audio, {
     return_timestamps: 'word',
-    chunk_length_s: 30,
-    stride_length_s: 5,
+    chunk_length_s: CHUNK_LENGTH_S,
+    stride_length_s: STRIDE_LENGTH_S,
   });
 
   return {
     text: result.text,
-    chunks: result.chunks,                       // [{ text, timestamp: [start, end] }]
+    chunks: result.chunks,
   };
 }
 

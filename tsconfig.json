@@ -1,12 +1,22 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "strict": true,
+    "jsx": "preserve",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["tests/**/*.ts", "playwright.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "src/vite-env.d.ts"
+  ]
 }

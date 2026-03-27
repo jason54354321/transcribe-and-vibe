@@ -2,12 +2,22 @@
   "name": "vibe-transcription",
   "private": true,
   "scripts": {
-    "dev": "bunx serve src -l tcp://127.0.0.1:8000",
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "static": "vue-tsc -b && vite build && vite preview",
     "test": "npx playwright test --project=fast",
     "test:slow": "npx playwright test --project=slow",
     "test:all": "npx playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "@vitejs/plugin-vue": "^6.0.5",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3",
+    "vue-tsc": "^3.2.6"
+  },
+  "dependencies": {
+    "vue": "^3.5.31"
   }
 }

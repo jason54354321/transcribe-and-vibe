@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { MOCK_CHUNKS, setupMockWorker, uploadTestAudio } from './fixtures';
+import { MOCK_CHUNKS, MOCK_MODEL_ID, MOCK_DTYPE, setupMockWorker, uploadTestAudio } from './fixtures';
 
 declare const Buffer: {
   from(input: string): Uint8Array;
@@ -144,6 +144,52 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       await expect(page.locator('#error-container')).toBeVisible();
       await expect(page.locator('#error-container')).toContainText('Model failed to load');
       await expect(page.locator('#drop-zone')).toBeVisible();
+    });
+
+    test('model info badge shows model and dtype', async ({ page }) => {
+      await setupMockWorker(page, { delay: 500 });
+      await page.goto('/');
+
+      await uploadTestAudio(page);
+
+      const badge = page.locator('#model-badge');
+      await expect(badge).toBeVisible();
+
+      const expectedName = MOCK_MODEL_ID.split('/').pop();
+      await expect(badge).toContainText(expectedName!);
+      await expect(badge).toContainText(MOCK_DTYPE);
+    });
+
+    test('download progress bar appears during model download', async ({ page }) => {
+      await setupMockWorker(page, { downloadDelay: 1000 });
+      await page.goto('/');
+
+      await uploadTestAudio(page);
+
+      const dlProgress = page.locator('#download-progress');
+      await expect(dlProgress).toBeVisible({ timeout: 3000 });
+      await expect(dlProgress).toContainText('encoder_model_fp16.onnx');
+      await expect(dlProgress).toContainText('MB');
+    });
+
+    test('download progress clears after completion', async ({ page }) => {
+      await setupMockWorker(page, { downloadDelay: 200 });
+      await page.goto('/');
+
+      await uploadTestAudio(page);
+
+      await expect(page.locator('#transcript-container')).toBeVisible();
+      await expect(page.locator('#download-progress')).toBeHidden();
+    });
+
+    test('all progress UI clears after completion', async ({ page }) => {
+      await setupMockWorker(page, { downloadDelay: 100 });
+      await page.goto('/');
+
+      await uploadTestAudio(page);
+
+      await expect(page.locator('#transcript-container')).toBeVisible();
+      await expect(page.locator('#download-progress')).toBeHidden();
     });
   });
 });

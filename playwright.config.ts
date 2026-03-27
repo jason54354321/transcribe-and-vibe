@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: 'list',
 
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:5173',
     launchOptions: {
       args: ['--autoplay-policy=no-user-gesture-required'],
     },
@@ -25,12 +25,13 @@ export default defineConfig({
       name: 'slow',
       testMatch: 'slow.spec.ts',
       timeout: 300_000,
+      use: { headless: true },
     },
   ],
 
   webServer: {
-    command: 'python3 -m http.server 8080 --directory src',
-    port: 8080,
+    command: 'npx vite',
+    port: 5173,
     reuseExistingServer: !process.env.CI,
   },
 });
