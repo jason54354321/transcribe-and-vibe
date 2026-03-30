@@ -103,6 +103,10 @@ export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
     }
   `);
 
+  await page.route('**/*silero*.onnx', (route) => route.abort());
+  await page.route('**/ort-wasm*.wasm', (route) => route.abort());
+  await page.route('**/ort-wasm*.mjs', (route) => route.abort());
+
   await page.route('**/worker.js', (route) =>
     route.fulfill({ contentType: 'application/javascript', body: script }),
   );

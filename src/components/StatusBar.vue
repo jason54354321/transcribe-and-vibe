@@ -24,7 +24,11 @@ const FILLER_MESSAGES = [
 const fillerIndex = ref(0)
 let fillerTimer: ReturnType<typeof setInterval> | null = null
 
-const isTranscribing = computed(() => props.status === 'Transcribing…')
+const isTranscribing = computed(() =>
+  props.status === 'Transcribing…' ||
+  props.status.startsWith('Transcribing segment') ||
+  props.status === 'Detecting speech segments…'
+)
 
 const subStatus = computed(() => {
   if (!isTranscribing.value) return null

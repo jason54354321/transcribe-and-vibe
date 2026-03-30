@@ -92,6 +92,7 @@ test.describe('Vibe Transcription - Fast Loop', () => {
 
     test('auto-highlight on matching time', async ({ page }) => {
       await uploadTestAudio(page);
+      await expect(page.locator('#transcript-container')).toBeVisible();
 
       await page.evaluate(() => {
         const audio = document.getElementById('audio-player') as HTMLAudioElement;

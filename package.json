@@ -8,16 +8,19 @@
     "static": "vue-tsc -b && vite build && vite preview",
     "test": "npx playwright test --project=fast",
     "test:slow": "npx playwright test --project=slow",
-    "test:all": "npx playwright test"
+    "test:all": "npx playwright test",
+    "test:unit": "vitest run"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@vitejs/plugin-vue": "^6.0.5",
     "typescript": "^6.0.2",
     "vite": "^8.0.3",
+    "vitest": "^4.1.2",
     "vue-tsc": "^3.2.6"
   },
   "dependencies": {
+    "@ricky0123/vad-web": "^0.0.30",
     "vue": "^3.5.31"
   }
 }
