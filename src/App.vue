@@ -10,7 +10,7 @@ import { useTranscriber } from './composables/useTranscriber'
 import { useFileUpload } from './composables/useFileUpload'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
 
-const { status, result, error, isProcessing, modelInfo, downloadProgress, transcribe, resetError } = useTranscriber()
+const { status, result, error, isProcessing, modelInfo, downloadProgress, transcriptionProgress, transcribe, resetError } = useTranscriber()
 const { handleFile } = useFileUpload()
 
 const selectedModel = ref(DEFAULT_MODEL)
@@ -20,6 +20,14 @@ const audioUrl = ref('')
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
 const isAudioStuck = ref(false)
 const appError = ref<string | null>(null)
+
+/** Revoke previous object URL to prevent memory leaks */
+function revokeAudioUrl() {
+  if (audioUrl.value) {
+    URL.revokeObjectURL(audioUrl.value)
+    audioUrl.value = ''
+  }
+}
 
 const showDropZone = computed(() => !isProcessing.value && !result.value)
 const showStatus = computed(() => isProcessing.value)
@@ -43,6 +51,7 @@ const onFileSelected = async (file: File) => {
   status.value = 'Reading file...'
 
   try {
+    revokeAudioUrl()
     const { audioUrl: url, audioData } = await handleFile(file)
     audioUrl.value = url
     transcribe(audioData, selectedModel.value, selectedDtype.value)
@@ -66,6 +75,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  revokeAudioUrl()
 })
 </script>
 
@@ -95,6 +105,7 @@ onUnmounted(() => {
       :status="status"
       :model-info="modelInfo"
       :download-progress="downloadProgress"
+      :transcription-progress="transcriptionProgress"
     />
 
     <AudioPlayer 

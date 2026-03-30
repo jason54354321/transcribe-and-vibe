@@ -5,6 +5,7 @@
  * Outbound: { type: 'progress', status: string }
  *           { type: 'model-info', model: string, dtype: string }
  *           { type: 'download-progress', file: string, progress: number, loaded: number, total: number }
+ *           { type: 'transcription-progress', completedChunks: number, totalChunks: number }
  *           { type: 'result',   data: { text, chunks } }
  *           { type: 'error',    message: string }
  */
@@ -59,15 +60,52 @@ async function getPipeline(modelId, dtype) {
   return transcriber;
 }
 
+/**
+ * Calculate total audio chunks using the same formula as the ASR pipeline.
+ * Mirrors: window = SR * chunk_length_s, stride = SR * stride_length_s, jump = window - 2*stride
+ */
+function countAudioChunks(audioLength) {
+  const SR = 16000;
+  const window = SR * CHUNK_LENGTH_S;
+  const stride = SR * STRIDE_LENGTH_S;
+  const jump = window - 2 * stride;
+
+  if (audioLength <= window) return 1;
+
+  let chunks = 0;
+  let offset = 0;
+  while (offset + window <= audioLength) {
+    chunks++;
+    offset += jump;
+  }
+  // Remaining partial chunk
+  if (offset < audioLength) chunks++;
+  return chunks;
+}
+
 async function transcribe(audio, modelId, dtype) {
   const pipe = await getPipeline(modelId, dtype);
 
+  const totalChunks = countAudioChunks(audio.length);
+  let completedChunks = 0;
+
   postMessage({ type: 'progress', status: 'Transcribing…' });
+  postMessage({ type: 'transcription-progress', completedChunks: 0, totalChunks });
+
+  // Duck-typed streamer: put() = token heartbeat, end() = chunk completed
+  const streamer = {
+    put() { /* token generated — could add heartbeat here if needed */ },
+    end() {
+      completedChunks++;
+      postMessage({ type: 'transcription-progress', completedChunks, totalChunks });
+    },
+  };
 
   const result = await pipe(audio, {
     return_timestamps: 'word',
     chunk_length_s: CHUNK_LENGTH_S,
     stride_length_s: STRIDE_LENGTH_S,
+    streamer,
   });
 
   return {
