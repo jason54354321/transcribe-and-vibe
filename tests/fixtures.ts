@@ -24,16 +24,20 @@ export type MockWorkerOptions = {
   delay?: number;
   error?: string;
   downloadDelay?: number;
+  chunks?: Array<{ text: string; timestamp: [number | null, number | null] }>;
+  text?: string;
 };
 
 export function getMockWorkerScript(options?: MockWorkerOptions) {
   const delay = options?.delay ?? 0;
   const error = options?.error;
   const downloadDelay = options?.downloadDelay ?? 0;
+  const chunks = options?.chunks ?? MOCK_CHUNKS;
+  const text = options?.text ?? MOCK_TEXT;
 
   return `
-const MOCK_TEXT = ${JSON.stringify(MOCK_TEXT)};
-const MOCK_CHUNKS = ${JSON.stringify(MOCK_CHUNKS)};
+const MOCK_TEXT = ${JSON.stringify(text)};
+const MOCK_CHUNKS = ${JSON.stringify(chunks)};
 const MODEL_ID = ${JSON.stringify(MOCK_MODEL_ID)};
 const DTYPE = ${JSON.stringify(MOCK_DTYPE)};
 
@@ -79,10 +83,7 @@ self.addEventListener('message', async (event) => {
 `;
 }
 
-export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
-  const script = getMockWorkerScript(options);
-
-  await page.addInitScript(`
+const BROWSER_MOCKS_SCRIPT = `
     class MockAudioContext {
       constructor(options) {
         this.sampleRate = (options && options.sampleRate) || 16000;
@@ -103,10 +104,23 @@ export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
     if (window.HTMLMediaElement) {
       window.HTMLMediaElement.prototype.play = function() { return Promise.resolve(); };
     }
-  `);
+`;
+
+export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
+  const script = getMockWorkerScript(options);
+
+  await page.addInitScript(BROWSER_MOCKS_SCRIPT);
 
   await page.route('**/worker.js', (route) =>
     route.fulfill({ contentType: 'application/javascript', body: script }),
+  );
+}
+
+export async function setupBrokenWorker(page: Page) {
+  await page.addInitScript(BROWSER_MOCKS_SCRIPT);
+
+  await page.route('**/worker.js', (route) =>
+    route.fulfill({ contentType: 'application/javascript', body: 'throw new Error("CDN failed to load");' }),
   );
 }
 
