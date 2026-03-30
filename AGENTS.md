@@ -42,23 +42,25 @@ npx vue-tsc -b          # Same check as `npm run build` first step
 public/worker.js              # Web Worker — Whisper ASR via @huggingface/transformers (CDN import)
 src/
   main.ts                     # App entry
-  App.vue                     # Root component, orchestrates file upload → transcribe → display
+  App.vue                     # Root component, orchestrates file upload → transcribe → display → session save/restore
   components/
     DropZone.vue              # Drag-and-drop file input
     AudioPlayer.vue           # <audio> element wrapper with seek support
+    SessionList.vue           # Sidebar with session history, new/delete/select actions
     StatusBar.vue             # Progress/status display during transcription
     TranscriptView.vue        # Word-level transcript with click-to-seek and auto-highlight
   composables/
     useTranscriber.ts         # Core pipeline: VAD → segment → Whisper Worker → merge results
-    useFileUpload.ts          # File validation + AudioContext decoding to Float32Array
+    useFileUpload.ts          # File validation + AudioContext decoding to Float32Array + original Blob
     useAudioPlayer.ts         # Audio playback state (currentTimeMs, seekTo)
+    useSessionStore.ts        # IndexedDB CRUD for session persistence (idb library)
   utils/
     vadPipeline.ts            # Pure functions: mergeVadSegments, offsetTimestamps, sliceAudio
     vadPipeline.test.ts       # Vitest unit tests for above
 tests/
   fixtures.ts                 # Mock worker script, MockAudioContext, test helpers
   fixtures/test_vibe.m4a      # Real audio fixture for E2E
-  fast.spec.ts                # 16 Playwright tests with mock worker (VAD routes blocked → fallback)
+  fast.spec.ts                # 22 Playwright tests with mock worker (VAD routes blocked → fallback)
   slow.spec.ts                # 1 Playwright test with real Whisper model
 ```
 
@@ -68,6 +70,7 @@ tests/
 - **VAD in main thread**: `@ricky0123/vad-web` (npm, bundled by Vite). If VAD fails to load (ONNX model unavailable), the pipeline falls back to treating the entire audio as one segment.
 - **Async transcription**: `transcribe()` in `useTranscriber.ts` is async but called without `await` from `App.vue` — it manages its own lifecycle via reactive refs and try/finally.
 - **Promise-based worker comm**: `pendingResolve`/`pendingReject` pattern wraps worker message passing. Only one transcription at a time.
+- **Session persistence**: IndexedDB via `idb` library. 3-store schema: `sessions` (metadata), `sessionBlobs` (audio Blob), `sessionTranscripts` (TranscribeResult). Auto-saves on transcription complete. Vue reactive proxies must be stripped via `JSON.parse(JSON.stringify())` before IndexedDB storage (DataCloneError).
 
 ## Code Style
 
@@ -116,8 +119,12 @@ import type { VadSegment } from '../utils/vadPipeline'
 - Use `calc(var(--spacing-unit) * N)` for spacing
 
 ### HTML / Accessibility
-- Key elements have explicit `id` attributes for test selectors (e.g., `#drop-zone`, `#status-container`, `#transcript-container`, `#error-container`)
+- Key elements have explicit `id` attributes for test selectors (e.g., `#drop-zone`, `#status-container`, `#transcript-container`, `#error-container`, `#session-sidebar`)
 - Preserve these IDs — Playwright tests depend on them
+
+### File Deletion
+- **NEVER delete files directly.** Add a TODO item describing the deletion and wait for user approval.
+- Deletion requires explicit user consent — if you delete first, the pre-commit hook will block the entire workflow.
 
 ### Error Handling
 - User-facing errors go to reactive `error` ref, displayed in `#error-container`

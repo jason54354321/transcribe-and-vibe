@@ -2,7 +2,12 @@ export const MAX_FILE_SIZE = 100 * 1024 * 1024
 export const VALID_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/ogg', 'audio/mp4', 'audio/x-wav', 'audio/aac']
 
 export function useFileUpload() {
-  const handleFile = async (file: File): Promise<{ audioUrl: string; audioData: Float32Array }> => {
+  const handleFile = async (file: File): Promise<{
+    audioUrl: string
+    audioData: Float32Array
+    audioBlob: Blob
+    durationSec: number
+  }> => {
     if (!VALID_TYPES.includes(file.type) && !file.type.startsWith('audio/')) {
       throw new Error(`Invalid file type: ${file.type}. Please upload audio.`)
     }
@@ -18,7 +23,7 @@ export function useFileUpload() {
     try {
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
       const audioData = audioBuffer.getChannelData(0)
-      return { audioUrl, audioData }
+      return { audioUrl, audioData, audioBlob: file, durationSec: audioBuffer.duration }
     } finally {
       audioContext.close()
     }

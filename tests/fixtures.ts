@@ -87,6 +87,7 @@ export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
       }
       async decodeAudioData() {
         return {
+          duration: 0.1,
           getChannelData() {
             return new Float32Array(1600);
           },
