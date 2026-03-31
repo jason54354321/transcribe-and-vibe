@@ -3,7 +3,7 @@ import { createLogger } from '../utils/logger'
 
 export type TranscribeResult = {
   text: string
-  chunks: Array<{ text: string; timestamp: [number, number] }>
+  chunks: Array<{ text: string; timestamp: [number | null, number | null] }>
 }
 
 export type ModelInfo = {
@@ -18,6 +18,11 @@ export type DownloadProgress = {
   total: number
 }
 
+export type TranscriptionProgress = {
+  completedChunks: number
+  totalChunks: number
+}
+
 export function useTranscriber() {
   const log = createLogger('Transcriber')
   const status = ref('Ready')
@@ -27,6 +32,7 @@ export function useTranscriber() {
   const modelInfo = ref<ModelInfo | null>(null)
   const downloadProgress = ref<Record<string, DownloadProgress>>({})
   const transcriptionTimeSec = ref<number | null>(null)
+  const transcriptionProgress = ref<TranscriptionProgress | null>(null)
 
   let worker: Worker | null = null
   let transcribeStartTime: number | null = null
@@ -37,6 +43,13 @@ export function useTranscriber() {
         new URL('../worker.ts', import.meta.url),
         { type: 'module' },
       )
+
+      worker.onerror = (e) => {
+        error.value = `Worker error: ${e.message || 'Unknown worker failure'}`
+        isProcessing.value = false
+        downloadProgress.value = {}
+        transcriptionProgress.value = null
+      }
 
       worker.onmessage = (e) => {
         const msg = e.data
@@ -59,6 +72,12 @@ export function useTranscriber() {
               },
             }
             break
+          case 'transcription-progress':
+            transcriptionProgress.value = {
+              completedChunks: msg.completedChunks,
+              totalChunks: msg.totalChunks,
+            }
+            break
           case 'result':
             result.value = msg.data
             if (transcribeStartTime !== null) {
@@ -67,17 +86,19 @@ export function useTranscriber() {
             }
             isProcessing.value = false
             downloadProgress.value = {}
+            transcriptionProgress.value = null
             break
           case 'error':
             error.value = msg.message
             log.error('Transcription failed', msg.message)
             isProcessing.value = false
             downloadProgress.value = {}
+            transcriptionProgress.value = null
             break
         }
       }
-    } catch {
-      error.value = 'Failed to initialize worker.'
+    } catch (err: unknown) {
+      error.value = `Failed to initialize worker: ${err instanceof Error ? err.message : String(err)}`
     }
   })
 
@@ -88,7 +109,7 @@ export function useTranscriber() {
     }
   })
 
-  const transcribe = (audio: Float32Array) => {
+  const transcribe = (audio: Float32Array, model: string, dtype: string) => {
     if (!worker) {
       error.value = 'Worker not initialized'
       return
@@ -99,10 +120,12 @@ export function useTranscriber() {
     isProcessing.value = true
     downloadProgress.value = {}
     transcriptionTimeSec.value = null
+    transcriptionProgress.value = null
     transcribeStartTime = performance.now()
+    status.value = 'Sending to worker...'
 
     log.info(`Starting transcription (${audio.length} samples)`)
-    worker.postMessage({ type: 'transcribe', audio })
+    worker.postMessage({ type: 'transcribe', audio, model, dtype }, [audio.buffer])
   }
 
   const resetError = () => {
@@ -117,6 +140,7 @@ export function useTranscriber() {
     modelInfo,
     downloadProgress,
     transcriptionTimeSec,
+    transcriptionProgress,
     transcribe,
     resetError,
   }

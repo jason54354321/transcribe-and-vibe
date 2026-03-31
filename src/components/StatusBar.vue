@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import type { ModelInfo, DownloadProgress } from '../composables/useTranscriber'
+import type { ModelInfo, DownloadProgress, TranscriptionProgress } from '../composables/useTranscriber'
 
 const props = defineProps<{
   status: string
   modelInfo?: ModelInfo | null
   downloadProgress?: Record<string, DownloadProgress>
+  transcriptionProgress?: TranscriptionProgress | null
 }>()
 
 const FILLER_MESSAGES = [
@@ -30,8 +31,23 @@ const isTranscribing = computed(() =>
   props.status === 'Detecting speech segments…'
 )
 
+const hasRealProgress = computed(() => {
+  const tp = props.transcriptionProgress
+  return tp != null && tp.totalChunks > 0
+})
+
+const progressPercent = computed(() => {
+  const tp = props.transcriptionProgress
+  if (!tp || tp.totalChunks === 0) return 0
+  return Math.round((tp.completedChunks / tp.totalChunks) * 100)
+})
+
 const subStatus = computed(() => {
   if (!isTranscribing.value) return null
+  if (hasRealProgress.value) {
+    const tp = props.transcriptionProgress!
+    return `Segment ${tp.completedChunks} / ${tp.totalChunks} — ${progressPercent.value}%`
+  }
   return FILLER_MESSAGES[fillerIndex.value % FILLER_MESSAGES.length]
 })
 
@@ -85,7 +101,10 @@ function formatSize(dp: DownloadProgress) {
   <div id="status-container" class="status-container">
     <div v-if="modelLabel" id="model-badge" class="model-badge">{{ modelLabel }}</div>
 
-    <div class="indeterminate-track">
+    <div v-if="isTranscribing && hasRealProgress" class="determinate-track">
+      <div class="determinate-bar" :style="{ width: progressPercent + '%' }"></div>
+    </div>
+    <div v-else class="indeterminate-track">
       <div class="indeterminate-bar"></div>
     </div>
     <div id="status-text" class="status-text">{{ status }}</div>
@@ -151,6 +170,23 @@ function formatSize(dp: DownloadProgress) {
   0% { left: -30%; }
   50% { left: 100%; }
   100% { left: -30%; }
+}
+
+.determinate-track {
+  width: 100%;
+  max-width: 400px;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  margin: 0 auto 12px;
+  overflow: hidden;
+}
+
+.determinate-bar {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 2px;
+  transition: width 0.5s ease;
 }
 
 .status-text {

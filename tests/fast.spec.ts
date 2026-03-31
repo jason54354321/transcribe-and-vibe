@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-import { MOCK_CHUNKS, MOCK_MODEL_ID, MOCK_DTYPE, setupMockWorker, uploadTestAudio } from './fixtures';
+import { MOCK_CHUNKS, MOCK_MODEL_ID, MOCK_DTYPE, setupMockWorker, setupBrokenWorker, uploadTestAudio } from './fixtures';
 
 async function transcribeAndWaitForSession(page: Page) {
   await uploadTestAudio(page);
@@ -175,7 +175,7 @@ test.describe('Vibe Transcription - Fast Loop', () => {
 
       const dlProgress = page.locator('#download-progress');
       await expect(dlProgress).toBeVisible({ timeout: 3000 });
-      await expect(dlProgress).toContainText('encoder_model_fp16.onnx');
+      await expect(dlProgress).toContainText('encoder_model_quantized.onnx');
       await expect(dlProgress).toContainText('MB');
     });
 
@@ -259,6 +259,69 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       await expect(page.locator('.session-item')).toHaveCount(0);
       await expect(page.locator('.empty-state')).toBeVisible();
       await expect(page.locator('#drop-zone')).toBeVisible();
+    });
+  });
+
+  test.describe('Oracle bug regression tests', () => {
+    test('C1: object URL is revoked on re-upload', async ({ page }) => {
+      await setupMockWorker(page);
+      await page.goto('/');
+
+      await page.evaluate(() => {
+        (window as any).__revokedUrls = [];
+        const original = URL.revokeObjectURL.bind(URL);
+        URL.revokeObjectURL = function(url: string) {
+          (window as any).__revokedUrls.push(url);
+          return original(url);
+        };
+      });
+
+      await uploadTestAudio(page);
+      await expect(page.locator('#transcript-container')).toBeVisible();
+
+      const firstUrl = await page.locator('#audio-player').getAttribute('src');
+      expect(firstUrl).toBeTruthy();
+
+      // Re-upload (input still in DOM via v-show, value reset by DropZone)
+      await uploadTestAudio(page);
+      await page.waitForFunction(
+        (oldUrl: string) => {
+          const audio = document.getElementById('audio-player');
+          return audio?.getAttribute('src') !== oldUrl;
+        },
+        firstUrl!,
+      );
+
+      const revokedUrls: string[] = await page.evaluate(() => (window as any).__revokedUrls);
+      expect(revokedUrls).toContain(firstUrl);
+    });
+
+    test('C2: worker.onerror shows error and preserves drop zone', async ({ page }) => {
+      await setupBrokenWorker(page);
+      await page.goto('/');
+
+      await expect(page.locator('#error-container')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#error-container')).toContainText('Worker error');
+      await expect(page.locator('#drop-zone')).toBeVisible();
+    });
+
+    test('C4: null timestamps in chunks are skipped gracefully', async ({ page }) => {
+      await setupMockWorker(page, {
+        chunks: [
+          { text: ' Hello', timestamp: [0.0, 0.42] },
+          { text: ' world', timestamp: [0.42, null] },
+          { text: ' test', timestamp: [null, 1.5] },
+          { text: ' good', timestamp: [1.5, 2.0] },
+        ],
+        text: ' Hello world test good',
+      });
+      await page.goto('/');
+      await uploadTestAudio(page);
+
+      await expect(page.locator('#transcript-container')).toBeVisible();
+      // TranscriptView skips chunks with null timestamps (line 34)
+      // Only ' Hello' and ' good' have both start+end → 2 words rendered
+      await expect(page.locator('.word')).toHaveCount(2);
     });
   });
 });

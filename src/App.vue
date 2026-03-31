@@ -5,6 +5,8 @@ import StatusBar from './components/StatusBar.vue'
 import AudioPlayer from './components/AudioPlayer.vue'
 import TranscriptView from './components/TranscriptView.vue'
 import SessionList from './components/SessionList.vue'
+import ModelSelector from './components/ModelSelector.vue'
+import { DEFAULT_MODEL, DEFAULT_DTYPE } from './models'
 import { useTranscriber } from './composables/useTranscriber'
 import type { TranscribeResult } from './composables/useTranscriber'
 import { useFileUpload } from './composables/useFileUpload'
@@ -15,8 +17,11 @@ import { createLogger } from './utils/logger'
 
 const log = createLogger('App')
 
-const { status, result, error, isProcessing, modelInfo, downloadProgress, transcriptionTimeSec, transcribe, resetError } = useTranscriber()
+const { status, result, error, isProcessing, modelInfo, downloadProgress, transcriptionTimeSec, transcriptionProgress, transcribe, resetError } = useTranscriber()
 const { handleFile } = useFileUpload()
+
+const selectedModel = ref(DEFAULT_MODEL)
+const selectedDtype = ref(DEFAULT_DTYPE)
 
 const audioUrl = ref('')
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
@@ -37,6 +42,14 @@ const transcribingFileName = ref('')
 const transcribingDuration = ref(0)
 const viewedTranscript = ref<TranscribeResult | null>(null)
 const displayTranscriptionTime = ref<number | null>(null)
+
+/** Revoke previous object URL to prevent memory leaks */
+function revokeAudioUrl() {
+  if (audioUrl.value) {
+    URL.revokeObjectURL(audioUrl.value)
+    audioUrl.value = ''
+  }
+}
 
 const showDropZone = computed(() => !isProcessing.value && !result.value)
 const showStatus = computed(() => isProcessing.value && activeSessionId.value === transcribingSessionId.value)
@@ -76,6 +89,7 @@ const onFileSelected = async (file: File) => {
   status.value = 'Reading file...'
 
   try {
+    revokeAudioUrl()
     const { audioUrl: url, audioData, audioBlob: blob, durationSec: dur } = await handleFile(file)
     audioUrl.value = url
     audioBlob.value = blob
@@ -90,7 +104,7 @@ const onFileSelected = async (file: File) => {
     ]
 
     log.info(`New transcription started (session: ${sessionId}, file: ${file.name})`)
-    transcribe(audioData)
+    transcribe(audioData, selectedModel.value, selectedDtype.value)
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
@@ -149,9 +163,7 @@ const onSessionSelect = async (id: string) => {
 
   // If clicking the session currently being transcribed, restore progress view
   if (isProcessing.value && id === transcribingSessionId.value) {
-    if (audioUrl.value) {
-      URL.revokeObjectURL(audioUrl.value)
-    }
+    revokeAudioUrl()
     activeSessionId.value = id
     result.value = null
     audioUrl.value = URL.createObjectURL(transcribingBlob.value!)
@@ -171,9 +183,7 @@ const onSessionSelect = async (id: string) => {
 
   const session = sessions.value.find(s => s.id === id)
 
-  if (audioUrl.value) {
-    URL.revokeObjectURL(audioUrl.value)
-  }
+  revokeAudioUrl()
 
   activeSessionId.value = id
   result.value = data.transcript
@@ -195,11 +205,8 @@ const onSessionDelete = async (id: string) => {
   sessions.value = await listSessions()
 
   if (activeSessionId.value === id) {
-    if (audioUrl.value) {
-      URL.revokeObjectURL(audioUrl.value)
-    }
+    revokeAudioUrl()
     activeSessionId.value = null
-    audioUrl.value = ''
     audioBlob.value = null
     result.value = null
     displayTranscriptionTime.value = null
@@ -211,11 +218,8 @@ const onSessionDelete = async (id: string) => {
 const onNewSession = () => {
   if (isProcessing.value) return
 
-  if (audioUrl.value) {
-    URL.revokeObjectURL(audioUrl.value)
-  }
+  revokeAudioUrl()
   activeSessionId.value = null
-  audioUrl.value = ''
   audioBlob.value = null
   result.value = null
   error.value = null
@@ -246,6 +250,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  revokeAudioUrl()
 })
 </script>
 
@@ -263,6 +268,11 @@ onUnmounted(() => {
         <header>
           <h1>Vibe Transcription</h1>
           <div class="subtitle">Local, private, in-browser audio transcription</div>
+          <ModelSelector
+            v-model:model-id="selectedModel"
+            v-model:dtype="selectedDtype"
+            :disabled="isProcessing"
+          />
         </header>
 
         <div v-show="displayError" id="error-container" class="error-container">
@@ -279,6 +289,7 @@ onUnmounted(() => {
           :status="status"
           :model-info="modelInfo"
           :download-progress="downloadProgress"
+          :transcription-progress="transcriptionProgress"
         />
 
         <AudioPlayer
