@@ -2,6 +2,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { NonRealTimeVAD } from '@ricky0123/vad-web'
 import { mergeVadSegments, offsetTimestamps, sliceAudio } from '../utils/vadPipeline'
 import type { VadSegment, TranscribeChunk } from '../utils/vadPipeline'
+import { createLogger } from '../utils/logger'
 
 export type TranscribeResult = {
   text: string
@@ -21,12 +22,14 @@ export type DownloadProgress = {
 }
 
 export function useTranscriber() {
+  const log = createLogger('Transcriber')
   const status = ref('Ready')
   const result = ref<TranscribeResult | null>(null)
   const error = ref<string | null>(null)
   const isProcessing = ref(false)
   const modelInfo = ref<ModelInfo | null>(null)
   const downloadProgress = ref<Record<string, DownloadProgress>>({})
+  const transcriptionTimeSec = ref<number | null>(null)
 
   let worker: Worker | null = null
   let vadInstance: NonRealTimeVAD | null = null
@@ -125,6 +128,10 @@ export function useTranscriber() {
     result.value = null
     isProcessing.value = true
     downloadProgress.value = {}
+    transcriptionTimeSec.value = null
+    const startTime = performance.now()
+
+    log.info(`Starting transcription (${audio.length} samples)`)
 
     try {
       status.value = 'Detecting speech segments…'
@@ -132,26 +139,34 @@ export function useTranscriber() {
       try {
         const rawSegments = await detectSpeechSegments(audio, 16000)
         segments = mergeVadSegments(rawSegments)
+        log.info(`VAD detected ${segments.length} segment(s)`)
       } catch {
         segments = [{ start: 0, end: (audio.length / 16000) * 1000 }]
+        log.warn('VAD failed, falling back to single segment')
       }
 
       if (segments.length === 0) {
         result.value = { text: '', chunks: [] }
+        log.info('No speech detected')
         return
       }
 
       const allChunks: TranscribeChunk[] = []
       for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i]
         status.value = segments.length > 1
           ? `Transcribing segment ${i + 1}/${segments.length}…`
           : 'Transcribing…'
 
-        const seg = segments[i]
+        log.info(`Transcribing segment ${i + 1}/${segments.length} (${(seg.start / 1000).toFixed(1)}s–${(seg.end / 1000).toFixed(1)}s)`)
+        const segStart = performance.now()
+
         const segAudio = sliceAudio(audio, seg.start, seg.end, 16000)
         const segResult = await transcribeSegment(segAudio)
         const offsetS = seg.start / 1000
         allChunks.push(...offsetTimestamps(segResult.chunks, offsetS))
+
+        log.info(`Segment ${i + 1}/${segments.length} done (${((performance.now() - segStart) / 1000).toFixed(1)}s)`)
       }
 
       result.value = {
@@ -160,7 +175,12 @@ export function useTranscriber() {
       }
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : String(err)
+      log.error('Transcription failed', err)
     } finally {
+      if (result.value !== null) {
+        transcriptionTimeSec.value = (performance.now() - startTime) / 1000
+        log.info(`Transcription complete (${transcriptionTimeSec.value.toFixed(1)}s, ${result.value.chunks.length} chunks)`)
+      }
       isProcessing.value = false
       downloadProgress.value = {}
     }
@@ -177,7 +197,8 @@ export function useTranscriber() {
     isProcessing,
     modelInfo,
     downloadProgress,
+    transcriptionTimeSec,
     transcribe,
-    resetError
+    resetError,
   }
 }

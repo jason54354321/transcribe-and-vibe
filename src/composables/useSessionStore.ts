@@ -1,12 +1,16 @@
 import { openDB } from 'idb'
 import type { DBSchema, IDBPDatabase } from 'idb'
 import type { TranscribeResult } from './useTranscriber'
+import { createLogger } from '../utils/logger'
+
+const log = createLogger('SessionStore')
 
 export type Session = {
   id: string
   name: string
   createdAt: number
   durationSec: number
+  transcriptionTimeSec?: number
 }
 
 interface VibeSessionDB extends DBSchema {
@@ -49,6 +53,7 @@ export async function saveSession(
   audioBlob: Blob,
   transcript: TranscribeResult,
 ): Promise<void> {
+  log.info(`Saving session ${session.id} "${session.name}"`)
   const db = await getDB()
   // Deep-clone transcript to strip Vue reactive proxies (not structured-clonable)
   const plainTranscript: TranscribeResult = JSON.parse(JSON.stringify(transcript))
@@ -59,6 +64,7 @@ export async function saveSession(
     tx.objectStore('sessionTranscripts').put(plainTranscript, session.id),
     tx.done,
   ])
+  log.info(`Session saved ${session.id}`)
 }
 
 export async function listSessions(): Promise<Session[]> {
@@ -70,6 +76,7 @@ export async function listSessions(): Promise<Session[]> {
 export async function loadSessionData(
   id: string,
 ): Promise<{ audioBlob: Blob; transcript: TranscribeResult } | null> {
+  log.info(`Loading session ${id}`)
   const db = await getDB()
   const tx = db.transaction(['sessionBlobs', 'sessionTranscripts'], 'readonly')
   const [audioBlob, transcript] = await Promise.all([
@@ -81,6 +88,7 @@ export async function loadSessionData(
 }
 
 export async function deleteSession(id: string): Promise<void> {
+  log.info(`Deleting session ${id}`)
   const db = await getDB()
   const tx = db.transaction(['sessions', 'sessionBlobs', 'sessionTranscripts'], 'readwrite')
   await Promise.all([

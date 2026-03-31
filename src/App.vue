@@ -11,8 +11,11 @@ import { useFileUpload } from './composables/useFileUpload'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
 import { saveSession, listSessions, loadSessionData, deleteSession } from './composables/useSessionStore'
 import type { Session } from './composables/useSessionStore'
+import { createLogger } from './utils/logger'
 
-const { status, result, error, isProcessing, modelInfo, downloadProgress, transcribe, resetError } = useTranscriber()
+const log = createLogger('App')
+
+const { status, result, error, isProcessing, modelInfo, downloadProgress, transcriptionTimeSec, transcribe, resetError } = useTranscriber()
 const { handleFile } = useFileUpload()
 
 const audioUrl = ref('')
@@ -33,11 +36,21 @@ const transcribingBlob = ref<Blob | null>(null)
 const transcribingFileName = ref('')
 const transcribingDuration = ref(0)
 const viewedTranscript = ref<TranscribeResult | null>(null)
+const displayTranscriptionTime = ref<number | null>(null)
 
 const showDropZone = computed(() => !isProcessing.value && !result.value)
 const showStatus = computed(() => isProcessing.value && activeSessionId.value === transcribingSessionId.value)
 const showTranscript = computed(() => result.value !== null)
 const displayError = computed(() => error.value || appError.value)
+
+const transcriptionTimeDisplay = computed(() => {
+  const t = displayTranscriptionTime.value
+  if (t === null) return ''
+  if (t < 60) return `${t.toFixed(1)}s`
+  const m = Math.floor(t / 60)
+  const s = t % 60
+  return `${m}m ${s.toFixed(0)}s`
+})
 
 const onFileSelected = async (file: File) => {
   appError.value = null
@@ -58,6 +71,7 @@ const onFileSelected = async (file: File) => {
   fileName.value = file.name
   transcribingFileName.value = file.name
   viewedTranscript.value = null
+  displayTranscriptionTime.value = null
   isProcessing.value = true
   status.value = 'Reading file...'
 
@@ -75,10 +89,12 @@ const onFileSelected = async (file: File) => {
       ...sessions.value,
     ]
 
+    log.info(`New transcription started (session: ${sessionId}, file: ${file.name})`)
     transcribe(audioData)
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
+    log.error('File processing failed', err)
     // Remove temporary session on failure
     sessions.value = sessions.value.filter(s => s.id !== sessionId)
     transcribingSessionId.value = null
@@ -95,6 +111,11 @@ watch(isProcessing, async (processing, wasProcessing) => {
     const transcriptToSave = result.value
     const savedSessionId = transcribingSessionId.value
 
+    // Update display transcription time if viewing the completing session
+    if (activeSessionId.value === savedSessionId) {
+      displayTranscriptionTime.value = transcriptionTimeSec.value
+    }
+
     // If viewing a different session, restore its transcript immediately (avoid flash)
     if (activeSessionId.value !== savedSessionId && viewedTranscript.value) {
       result.value = viewedTranscript.value
@@ -106,11 +127,13 @@ watch(isProcessing, async (processing, wasProcessing) => {
         name: transcribingFileName.value,
         createdAt: Date.now(),
         durationSec: transcribingDuration.value,
+        transcriptionTimeSec: transcriptionTimeSec.value ?? undefined,
       }
+      log.info(`Auto-saving session ${savedSessionId}`)
       await saveSession(session, transcribingBlob.value, transcriptToSave)
       sessions.value = await listSessions()
     } catch (err: unknown) {
-      console.error('Failed to save session:', err)
+      log.error('Failed to save session', err)
     }
   } else if (transcribingSessionId.value) {
     // Transcription failed — remove temporary session
@@ -136,11 +159,13 @@ const onSessionSelect = async (id: string) => {
     fileName.value = transcribingFileName.value
     durationSec.value = transcribingDuration.value
     viewedTranscript.value = null
+    displayTranscriptionTime.value = null
     error.value = null
     appError.value = null
     return
   }
 
+  log.info(`Session selected: ${id}`)
   const data = await loadSessionData(id)
   if (!data) return
 
@@ -157,6 +182,7 @@ const onSessionSelect = async (id: string) => {
   audioBlob.value = data.audioBlob
   fileName.value = session?.name ?? ''
   durationSec.value = session?.durationSec ?? 0
+  displayTranscriptionTime.value = session?.transcriptionTimeSec ?? null
   error.value = null
   appError.value = null
 }
@@ -164,6 +190,7 @@ const onSessionSelect = async (id: string) => {
 const onSessionDelete = async (id: string) => {
   if (id === transcribingSessionId.value) return
 
+  log.info(`Session deleted: ${id}`)
   await deleteSession(id)
   sessions.value = await listSessions()
 
@@ -175,6 +202,7 @@ const onSessionDelete = async (id: string) => {
     audioUrl.value = ''
     audioBlob.value = null
     result.value = null
+    displayTranscriptionTime.value = null
     error.value = null
     appError.value = null
   }
@@ -194,6 +222,8 @@ const onNewSession = () => {
   appError.value = null
   fileName.value = ''
   durationSec.value = 0
+  displayTranscriptionTime.value = null
+  log.info('New session')
 }
 
 const onSeek = (ms: number) => {
@@ -208,8 +238,9 @@ onMounted(async () => {
   window.addEventListener('scroll', handleScroll)
   try {
     sessions.value = await listSessions()
+    log.info(`Loaded ${sessions.value.length} session(s)`)
   } catch (err: unknown) {
-    console.error('Failed to load sessions:', err)
+    log.error('Failed to load sessions', err)
   }
 })
 
@@ -256,6 +287,10 @@ onUnmounted(() => {
           ref="audioPlayerRef"
           :class="{ stuck: isAudioStuck }"
         />
+
+        <div v-show="result && displayTranscriptionTime != null" class="transcription-meta">
+          Transcribed in {{ transcriptionTimeDisplay }}
+        </div>
 
         <TranscriptView
           v-show="showTranscript && result"
@@ -339,6 +374,12 @@ h1 {
   margin-bottom: var(--spacing-unit);
   text-align: center;
   font-size: 14px;
+}
+
+.transcription-meta {
+  color: var(--secondary-text);
+  font-size: 13px;
+  margin-bottom: calc(var(--spacing-unit) / 2);
 }
 
 @media (max-width: 600px) {
