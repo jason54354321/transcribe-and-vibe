@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch, ref, nextTick } from 'vue'
 
-type Chunk = { text: string; timestamp: [number, number] }
+type Chunk = { text: string; timestamp: [number | null, number | null] }
 
 const props = defineProps<{
   chunks: Chunk[]

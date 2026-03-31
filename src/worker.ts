@@ -19,8 +19,8 @@ import { createLogger } from './utils/logger'
 
 const log = createLogger('Worker')
 
-const MODEL_ID = 'onnx-community/whisper-small_timestamped'
-const DTYPE = 'q8'
+const DEFAULT_MODEL_ID = 'onnx-community/whisper-small_timestamped'
+const DEFAULT_DTYPE = 'q8'
 const CHUNK_LENGTH_S = 30
 const STRIDE_LENGTH_S = 5
 
@@ -37,19 +37,25 @@ type ASRPipeline = (
 }>
 
 let whisperPipeline: ASRPipeline | null = null
+let loadedModelId: string | null = null
+let loadedDtype: string | null = null
 
-async function getWhisperPipeline(): Promise<ASRPipeline> {
-  if (whisperPipeline) return whisperPipeline
+async function getWhisperPipeline(modelId: string, dtype: string): Promise<ASRPipeline> {
+  if (whisperPipeline && loadedModelId === modelId && loadedDtype === dtype) return whisperPipeline
 
-  postMessage({ type: 'model-info', model: MODEL_ID, dtype: DTYPE })
+  whisperPipeline = null
+  loadedModelId = modelId
+  loadedDtype = dtype
+
+  postMessage({ type: 'model-info', model: modelId, dtype })
   postMessage({ type: 'progress', status: 'Loading model…' })
 
   const { pipeline } = await import(
     /* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3'
   )
 
-  whisperPipeline = await pipeline('automatic-speech-recognition', MODEL_ID, {
-    dtype: DTYPE,
+  whisperPipeline = await pipeline('automatic-speech-recognition', modelId, {
+    dtype,
     device: 'wasm',
     progress_callback: (event) => {
       if (event.status === 'progress' && event.file) {
@@ -72,7 +78,13 @@ let vadInstance: NonRealTimeVAD | null = null
 
 async function detectSpeechSegments(audio: Float32Array, sampleRate: number): Promise<VadSegment[]> {
   if (!vadInstance) {
-    vadInstance = await NonRealTimeVAD.new()
+    vadInstance = await NonRealTimeVAD.new({
+      positiveSpeechThreshold: 0.2,
+      negativeSpeechThreshold: 0.15,
+      redemptionMs: 2000,
+      minSpeechMs: 200,
+      preSpeechPadMs: 1000,
+    })
   }
   const segments: VadSegment[] = []
   for await (const { start, end } of vadInstance.run(audio, sampleRate)) {
@@ -81,7 +93,7 @@ async function detectSpeechSegments(audio: Float32Array, sampleRate: number): Pr
   return segments
 }
 
-async function transcribe(audio: Float32Array): Promise<void> {
+async function transcribe(audio: Float32Array, modelId: string, dtype: string): Promise<void> {
   log.info(`Starting transcription (${audio.length} samples)`)
 
   postMessage({ type: 'progress', status: 'Detecting speech segments…' })
@@ -101,7 +113,7 @@ async function transcribe(audio: Float32Array): Promise<void> {
     return
   }
 
-  const pipe = await getWhisperPipeline()
+  const pipe = await getWhisperPipeline(modelId, dtype)
   const allChunks: TranscribeChunk[] = []
 
   for (let i = 0; i < segments.length; i++) {
@@ -137,15 +149,18 @@ async function transcribe(audio: Float32Array): Promise<void> {
 }
 
 addEventListener('message', async (e: MessageEvent) => {
-  const { type, audio } = e.data
+  const { type, audio, model, dtype } = e.data
   if (type !== 'transcribe') return
+
+  const modelId = model || DEFAULT_MODEL_ID
+  const dtypeVal = dtype || DEFAULT_DTYPE
 
   try {
     if (!audio || audio.length === 0) {
       postMessage({ type: 'error', message: 'Empty audio data received.' })
       return
     }
-    await transcribe(audio)
+    await transcribe(audio, modelId, dtypeVal)
   } catch (err: unknown) {
     postMessage({
       type: 'error',

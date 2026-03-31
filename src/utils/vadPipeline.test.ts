@@ -31,19 +31,18 @@ describe('mergeVadSegments', () => {
     ])
   })
 
-  it('merges many small segments into groups', () => {
+  it('merges many small segments into groups (gap-based)', () => {
     const segments = [
       { start: 0, end: 2000 },
-      { start: 3000, end: 5000 },
-      { start: 6000, end: 8000 },
-      { start: 28000, end: 29000 },
-      // next segment: 31000 - 0 = 31s > 30s → new group
-      { start: 31000, end: 33000 },
-      { start: 34000, end: 36000 },
+      { start: 3000, end: 5000 },   // gap=1s → merge
+      { start: 6000, end: 8000 },   // gap=1s → merge
+      { start: 28000, end: 29000 }, // gap=20s > 3s → split
+      { start: 31000, end: 33000 }, // gap=2s → merge
+      { start: 34000, end: 36000 }, // gap=1s → merge
     ]
     expect(mergeVadSegments(segments)).toEqual([
-      { start: 0, end: 29000 },
-      { start: 31000, end: 36000 },
+      { start: 0, end: 8000 },
+      { start: 28000, end: 36000 },
     ])
   })
 
@@ -69,22 +68,61 @@ describe('mergeVadSegments', () => {
     ])
   })
 
-  it('handles three groups correctly', () => {
+  it('splits all segments when gaps exceed maxGapMs', () => {
     const segments = [
       { start: 0, end: 10000 },
-      { start: 15000, end: 25000 },
-      // 25000 - 0 = 25s ≤ 30s → still in group 1
-      { start: 40000, end: 50000 },
-      // 50000 - 0 = 50s > 30s → new group
-      { start: 55000, end: 65000 },
-      // 65000 - 40000 = 25s ≤ 30s → still in group 2
-      { start: 80000, end: 90000 },
-      // 90000 - 40000 = 50s > 30s → new group
+      { start: 15000, end: 25000 },  // gap=5s > 3s → split
+      { start: 40000, end: 50000 },  // gap=15s > 3s → split
+      { start: 55000, end: 65000 },  // gap=5s > 3s → split
+      { start: 80000, end: 90000 },  // gap=15s > 3s → split
     ]
     expect(mergeVadSegments(segments)).toEqual([
-      { start: 0, end: 25000 },
-      { start: 40000, end: 65000 },
+      { start: 0, end: 10000 },
+      { start: 15000, end: 25000 },
+      { start: 40000, end: 50000 },
+      { start: 55000, end: 65000 },
       { start: 80000, end: 90000 },
+    ])
+  })
+
+  it('splits on large gap even when total span fits in 30s', () => {
+    const segments = [
+      { start: 0, end: 2000 },
+      { start: 20000, end: 22000 }, // gap=18s > 3s → split (span=22s ≤ 30s)
+    ]
+    expect(mergeVadSegments(segments)).toEqual([
+      { start: 0, end: 2000 },
+      { start: 20000, end: 22000 },
+    ])
+  })
+
+  it('respects custom maxGapMs', () => {
+    const segments = [
+      { start: 0, end: 5000 },
+      { start: 8000, end: 12000 }, // gap=3s
+    ]
+    // gap=3s ≤ 3s (default) → merge
+    expect(mergeVadSegments(segments)).toEqual([{ start: 0, end: 12000 }])
+    // gap=3s > 2s (custom) → split
+    expect(mergeVadSegments(segments, 30, 2000)).toEqual([
+      { start: 0, end: 5000 },
+      { start: 8000, end: 12000 },
+    ])
+    // gap=3s ≤ 5s (custom) → merge
+    expect(mergeVadSegments(segments, 30, 5000)).toEqual([
+      { start: 0, end: 12000 },
+    ])
+  })
+
+  it('enforces maxDuration even when gap is small', () => {
+    const segments = [
+      { start: 0, end: 14000 },
+      { start: 15000, end: 29000 }, // gap=1s ≤ 3s, span=29s ≤ 30s → merge
+      { start: 29500, end: 32000 }, // gap=0.5s ≤ 3s, but span=32s > 30s → split
+    ]
+    expect(mergeVadSegments(segments)).toEqual([
+      { start: 0, end: 29000 },
+      { start: 29500, end: 32000 },
     ])
   })
 })

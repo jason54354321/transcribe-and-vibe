@@ -8,7 +8,7 @@ export interface TranscribeChunk {
   timestamp: [number, number]
 }
 
-export function mergeVadSegments(segments: VadSegment[], maxDurationS = 30): VadSegment[] {
+export function mergeVadSegments(segments: VadSegment[], maxDurationS = 30, maxGapMs = 3000): VadSegment[] {
   if (segments.length === 0) return []
 
   const maxDurationMs = maxDurationS * 1000
@@ -17,7 +17,10 @@ export function mergeVadSegments(segments: VadSegment[], maxDurationS = 30): Vad
 
   for (let i = 1; i < segments.length; i++) {
     const seg = segments[i]
-    if (seg.end - current.start <= maxDurationMs) {
+    const gap = seg.start - current.end
+    const spanIfMerged = seg.end - current.start
+
+    if (gap <= maxGapMs && spanIfMerged <= maxDurationMs) {
       current.end = seg.end
     } else {
       merged.push(current)
