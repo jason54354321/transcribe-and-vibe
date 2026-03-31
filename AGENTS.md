@@ -1,7 +1,7 @@
 # AGENTS.md — Vibe Transcription
 
 In-browser audio transcription app. Vue 3 + Vite 8 + TypeScript 6 (strict mode).
-Whisper ASR runs in a Web Worker; Silero VAD runs in the main thread.
+Whisper ASR and Silero VAD both run in a Vite-bundled Web Worker (`src/worker.ts`).
 
 ## Build & Test Commands
 
@@ -39,9 +39,10 @@ npx vue-tsc -b          # Same check as `npm run build` first step
 ## Project Structure
 
 ```
-public/worker.js              # Web Worker — Whisper ASR via @huggingface/transformers (CDN import)
 src/
   main.ts                     # App entry
+  worker.ts                   # Web Worker — full pipeline: VAD → Whisper ASR (Vite-bundled)
+  transformers-cdn.d.ts       # Ambient module types for CDN-loaded @huggingface/transformers
   App.vue                     # Root component, orchestrates file upload → transcribe → display → session save/restore
   components/
     DropZone.vue              # Drag-and-drop file input
@@ -50,11 +51,12 @@ src/
     StatusBar.vue             # Progress/status display during transcription
     TranscriptView.vue        # Word-level transcript with click-to-seek and auto-highlight
   composables/
-    useTranscriber.ts         # Core pipeline: VAD → segment → Whisper Worker → merge results
+    useTranscriber.ts         # Thin client: creates Worker, posts messages, updates reactive refs
     useFileUpload.ts          # File validation + AudioContext decoding to Float32Array + original Blob
     useAudioPlayer.ts         # Audio playback state (currentTimeMs, seekTo)
     useSessionStore.ts        # IndexedDB CRUD for session persistence (idb library)
   utils/
+    logger.ts                 # createLogger(tag) — console wrapper with [HH:MM:SS.mmm][Tag] prefix
     vadPipeline.ts            # Pure functions: mergeVadSegments, offsetTimestamps, sliceAudio
     vadPipeline.test.ts       # Vitest unit tests for above
 tests/
@@ -66,10 +68,11 @@ tests/
 
 ## Architecture Notes
 
-- **Worker isolation**: `public/worker.js` imports `@huggingface/transformers` from CDN (not bundled). It uses plain JS, NOT TypeScript. The worker communicates via `postMessage` with typed message protocol.
-- **VAD in main thread**: `@ricky0123/vad-web` (npm, bundled by Vite). If VAD fails to load (ONNX model unavailable), the pipeline falls back to treating the entire audio as one segment.
-- **Async transcription**: `transcribe()` in `useTranscriber.ts` is async but called without `await` from `App.vue` — it manages its own lifecycle via reactive refs and try/finally.
-- **Promise-based worker comm**: `pendingResolve`/`pendingReject` pattern wraps worker message passing. Only one transcription at a time.
+- **Worker pipeline**: `src/worker.ts` is Vite-bundled and runs the full pipeline: VAD (Silero via `@ricky0123/vad-web`, npm-bundled) → segment merging → Whisper ASR (`@huggingface/transformers@3`, CDN dynamic import via `/* @vite-ignore */`). This keeps ~50–100 MB of ONNX/WASM runtime off the main thread.
+- **VAD fallback**: If VAD fails to load (ONNX model unavailable), the worker falls back to treating the entire audio as one segment.
+- **Thin client**: `useTranscriber.ts` is a thin wrapper — `transcribe()` is synchronous (just `postMessage`), and the `onmessage` handler updates reactive refs. No VAD imports, no Promise-based worker comm.
+- **Worker instantiation**: `new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' })` — Vite resolves and bundles the worker at build time.
+- **CDN types**: `src/transformers-cdn.d.ts` provides ambient module declarations for the CDN URL, enabling full type safety on the dynamic import.
 - **Session persistence**: IndexedDB via `idb` library. 3-store schema: `sessions` (metadata), `sessionBlobs` (audio Blob), `sessionTranscripts` (TranscribeResult). Auto-saves on transcription complete. Vue reactive proxies must be stripped via `JSON.parse(JSON.stringify())` before IndexedDB storage (DataCloneError).
 
 ## Code Style
@@ -147,11 +150,11 @@ import type { VadSegment } from '../utils/vadPipeline'
 - Import from vitest: `import { describe, it, expect } from 'vitest'`
 
 ### Slow tests (Playwright)
-- No mocking — real worker.js, real Whisper model download
+- No mocking — real Vite-bundled worker, real Whisper model download
 - 300s timeout; captures console errors and page errors
 - Only run explicitly via `npm run test:slow`
 
-## Worker Protocol (public/worker.js)
+## Worker Protocol (src/worker.ts)
 
 Messages from main thread to worker:
 ```

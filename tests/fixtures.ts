@@ -108,7 +108,7 @@ export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
   await page.route('**/ort-wasm*.wasm', (route) => route.abort());
   await page.route('**/ort-wasm*.mjs', (route) => route.abort());
 
-  await page.route('**/worker.js', (route) =>
+  await page.route(/\/worker\b/, (route) =>
     route.fulfill({ contentType: 'application/javascript', body: script }),
   );
 }
