@@ -12,6 +12,6 @@ export default defineConfig({
     format: 'es',
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/benchmark/**/*.test.ts'],
   },
 })

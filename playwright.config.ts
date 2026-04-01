@@ -27,6 +27,12 @@ export default defineConfig({
       timeout: 300_000,
       use: { headless: true },
     },
+    {
+      name: 'benchmark',
+      testMatch: 'benchmark/**/*.spec.ts',
+      timeout: 900_000,
+      use: { headless: true },
+    },
   ],
 
   webServer: {

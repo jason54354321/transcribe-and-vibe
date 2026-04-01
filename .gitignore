@@ -5,3 +5,6 @@ playwright-report/
 .opencode/
 .sisyphus/
 *.tsbuildinfo
+.DS_Store
+tmp/
+tests/benchmark/results/
