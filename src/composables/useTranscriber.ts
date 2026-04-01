@@ -109,7 +109,7 @@ export function useTranscriber() {
     }
   })
 
-  const transcribe = (audio: Float32Array, model: string, dtype: string) => {
+  const transcribe = (audio: Float32Array, model: string, dtype: string, useVad = true) => {
     if (!worker) {
       error.value = 'Worker not initialized'
       return
@@ -124,8 +124,8 @@ export function useTranscriber() {
     transcribeStartTime = performance.now()
     status.value = 'Sending to worker...'
 
-    log.info(`Starting transcription (${audio.length} samples)`)
-    worker.postMessage({ type: 'transcribe', audio, model, dtype }, [audio.buffer])
+    log.info(`Starting transcription (${audio.length} samples, VAD=${useVad})`)
+    worker.postMessage({ type: 'transcribe', audio, model, dtype, useVad }, [audio.buffer])
   }
 
   const resetError = () => {

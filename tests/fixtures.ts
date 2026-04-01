@@ -26,6 +26,7 @@ export type MockWorkerOptions = {
   downloadDelay?: number;
   chunks?: Array<{ text: string; timestamp: [number | null, number | null] }>;
   text?: string;
+  totalChunks?: number;
 };
 
 export function getMockWorkerScript(options?: MockWorkerOptions) {
@@ -34,6 +35,7 @@ export function getMockWorkerScript(options?: MockWorkerOptions) {
   const downloadDelay = options?.downloadDelay ?? 0;
   const chunks = options?.chunks ?? MOCK_CHUNKS;
   const text = options?.text ?? MOCK_TEXT;
+  const segments = options?.totalChunks ?? 0;
 
   return `
 const MOCK_TEXT = ${JSON.stringify(text)};
@@ -61,7 +63,7 @@ self.addEventListener('message', async (event) => {
     await sleep(${JSON.stringify(downloadDelay)} / 2);
   }
 
-  if (${JSON.stringify(delay)} > 0) {
+  if (${JSON.stringify(segments)} === 0 && ${JSON.stringify(delay)} > 0) {
     await sleep(${JSON.stringify(delay)});
   }
 
@@ -70,7 +72,17 @@ self.addEventListener('message', async (event) => {
     return;
   }
 
+  const TOTAL_CHUNKS = ${JSON.stringify(segments)};
   self.postMessage({ type: 'progress', status: 'Transcribing…' });
+  if (TOTAL_CHUNKS > 0) {
+    self.postMessage({ type: 'transcription-progress', completedChunks: 0, totalChunks: TOTAL_CHUNKS });
+    for (let i = 1; i <= TOTAL_CHUNKS; i++) {
+      await sleep(${JSON.stringify(delay)} / TOTAL_CHUNKS);
+      self.postMessage({ type: 'transcription-progress', completedChunks: i, totalChunks: TOTAL_CHUNKS });
+    }
+  } else if (${JSON.stringify(delay)} > 0) {
+    await sleep(${JSON.stringify(delay)});
+  }
 
   self.postMessage({
     type: 'result',

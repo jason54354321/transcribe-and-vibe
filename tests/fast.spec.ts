@@ -198,6 +198,26 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       await expect(page.locator('#transcript-container')).toBeVisible();
       await expect(page.locator('#download-progress')).toBeHidden();
     });
+
+    test('transcription progress bar shows during multi-segment transcription', async ({ page }) => {
+      await setupMockWorker(page, { totalChunks: 5, delay: 3000 });
+      await page.goto('/');
+
+      await uploadTestAudio(page);
+
+      await expect(page.locator('.determinate-track')).toBeVisible({ timeout: 5000 });
+
+      const progressInfo = page.locator('.progress-info');
+      await expect(progressInfo).toBeVisible();
+      await expect(progressInfo).toContainText(/\d+ \/ 5 chunks/);
+
+      const subStatus = page.locator('.sub-status');
+      await expect(subStatus).toBeVisible();
+
+      await expect(page.locator('#transcript-container')).toBeVisible({ timeout: 10000 });
+
+      await expect(page.locator('.determinate-track')).toBeHidden();
+    });
   });
 
   test.describe('session persistence', () => {

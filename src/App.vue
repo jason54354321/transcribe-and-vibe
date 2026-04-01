@@ -22,6 +22,7 @@ const { handleFile } = useFileUpload()
 
 const selectedModel = ref(DEFAULT_MODEL)
 const selectedDtype = ref(DEFAULT_DTYPE)
+const useVad = ref(true)
 
 const audioUrl = ref('')
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
@@ -103,8 +104,8 @@ const onFileSelected = async (file: File) => {
       ...sessions.value,
     ]
 
-    log.info(`New transcription started (session: ${sessionId}, file: ${file.name})`)
-    transcribe(audioData, selectedModel.value, selectedDtype.value)
+    log.info(`New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value})`)
+    transcribe(audioData, selectedModel.value, selectedDtype.value, useVad.value)
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
@@ -273,6 +274,18 @@ onUnmounted(() => {
             v-model:dtype="selectedDtype"
             :disabled="isProcessing"
           />
+          <div class="vad-toggle">
+            <label class="toggle-label">
+              <input
+                id="vad-toggle"
+                type="checkbox"
+                :checked="useVad"
+                :disabled="isProcessing"
+                @change="useVad = ($event.target as HTMLInputElement).checked"
+              />
+              <span>VAD preprocessing</span>
+            </label>
+          </div>
         </header>
 
         <div v-show="displayError" id="error-container" class="error-container">
@@ -391,6 +404,30 @@ h1 {
   color: var(--secondary-text);
   font-size: 13px;
   margin-bottom: calc(var(--spacing-unit) / 2);
+}
+
+.vad-toggle {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--secondary-text);
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-color);
+}
+
+.toggle-label input[type="checkbox"]:disabled {
+  cursor: not-allowed;
 }
 
 @media (max-width: 600px) {

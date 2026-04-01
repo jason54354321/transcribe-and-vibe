@@ -4,7 +4,7 @@
  * Runs VAD (Silero) and Whisper (HuggingFace Transformers) entirely in the
  * worker thread, keeping ~50–100 MB of ONNX/WASM runtime off the main thread.
  *
- * Inbound:  { type: 'transcribe', audio: Float32Array }
+ * Inbound:  { type: 'transcribe', audio: Float32Array, useVad?: boolean }
  * Outbound: { type: 'progress',          status: string }
  *           { type: 'model-info',        model: string, dtype: string }
  *           { type: 'download-progress', file: string, progress: number, loaded: number, total: number }
@@ -30,11 +30,30 @@ type ASRPipeline = (
     return_timestamps?: string
     chunk_length_s?: number
     stride_length_s?: number
+    streamer?: { put: () => void; end: () => void }
   },
 ) => Promise<{
   text: string
   chunks: TranscribeChunk[]
 }>
+
+function countAudioChunks(audioLength: number): number {
+  const SR = 16000
+  const window = SR * CHUNK_LENGTH_S
+  const stride = SR * STRIDE_LENGTH_S
+  const jump = window - 2 * stride
+
+  if (audioLength <= window) return 1
+
+  let chunks = 0
+  let offset = 0
+  while (offset + window <= audioLength) {
+    chunks++
+    offset += jump
+  }
+  if (offset < audioLength) chunks++
+  return chunks
+}
 
 let whisperPipeline: ASRPipeline | null = null
 let loadedModelId: string | null = null
@@ -93,18 +112,23 @@ async function detectSpeechSegments(audio: Float32Array, sampleRate: number): Pr
   return segments
 }
 
-async function transcribe(audio: Float32Array, modelId: string, dtype: string): Promise<void> {
-  log.info(`Starting transcription (${audio.length} samples)`)
+async function transcribe(audio: Float32Array, modelId: string, dtype: string, useVad = true): Promise<void> {
+  log.info(`Starting transcription (${audio.length} samples, VAD=${useVad})`)
 
-  postMessage({ type: 'progress', status: 'Detecting speech segments…' })
   let segments: VadSegment[]
-  try {
-    const rawSegments = await detectSpeechSegments(audio, 16000)
-    segments = mergeVadSegments(rawSegments)
-    log.info(`VAD detected ${segments.length} segment(s)`)
-  } catch {
+  if (useVad) {
+    postMessage({ type: 'progress', status: 'Detecting speech segments…' })
+    try {
+      const rawSegments = await detectSpeechSegments(audio, 16000)
+      segments = mergeVadSegments(rawSegments)
+      log.info(`VAD detected ${segments.length} segment(s)`)
+    } catch {
+      segments = [{ start: 0, end: (audio.length / 16000) * 1000 }]
+      log.warn('VAD failed, falling back to single segment')
+    }
+  } else {
     segments = [{ start: 0, end: (audio.length / 16000) * 1000 }]
-    log.warn('VAD failed, falling back to single segment')
+    log.info('VAD disabled, using full audio as single segment')
   }
 
   if (segments.length === 0) {
@@ -115,6 +139,14 @@ async function transcribe(audio: Float32Array, modelId: string, dtype: string): 
 
   const pipe = await getWhisperPipeline(modelId, dtype)
   const allChunks: TranscribeChunk[] = []
+
+  const totalSegAudioLengths = segments.reduce((sum, seg) => {
+    return sum + sliceAudio(audio, seg.start, seg.end, 16000).length
+  }, 0)
+  const totalChunks = countAudioChunks(totalSegAudioLengths)
+  let completedChunks = 0
+
+  postMessage({ type: 'transcription-progress', completedChunks: 0, totalChunks })
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]
@@ -127,10 +159,20 @@ async function transcribe(audio: Float32Array, modelId: string, dtype: string): 
     const segStart = performance.now()
 
     const segAudio = sliceAudio(audio, seg.start, seg.end, 16000)
+
+    const streamer = {
+      put() {},
+      end() {
+        completedChunks++
+        postMessage({ type: 'transcription-progress', completedChunks, totalChunks })
+      },
+    }
+
     const segResult = await pipe(segAudio, {
       return_timestamps: 'word',
       chunk_length_s: CHUNK_LENGTH_S,
       stride_length_s: STRIDE_LENGTH_S,
+      streamer,
     })
 
     const offsetS = seg.start / 1000
@@ -149,7 +191,7 @@ async function transcribe(audio: Float32Array, modelId: string, dtype: string): 
 }
 
 addEventListener('message', async (e: MessageEvent) => {
-  const { type, audio, model, dtype } = e.data
+  const { type, audio, model, dtype, useVad } = e.data
   if (type !== 'transcribe') return
 
   const modelId = model || DEFAULT_MODEL_ID
@@ -160,7 +202,7 @@ addEventListener('message', async (e: MessageEvent) => {
       postMessage({ type: 'error', message: 'Empty audio data received.' })
       return
     }
-    await transcribe(audio, modelId, dtypeVal)
+    await transcribe(audio, modelId, dtypeVal, useVad !== false)
   } catch (err: unknown) {
     postMessage({
       type: 'error',

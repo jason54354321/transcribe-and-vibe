@@ -42,12 +42,14 @@ const progressPercent = computed(() => {
   return Math.round((tp.completedChunks / tp.totalChunks) * 100)
 })
 
+const progressInfo = computed(() => {
+  if (!isTranscribing.value || !hasRealProgress.value) return null
+  const tp = props.transcriptionProgress!
+  return `${tp.completedChunks} / ${tp.totalChunks} chunks — ${progressPercent.value}%`
+})
+
 const subStatus = computed(() => {
   if (!isTranscribing.value) return null
-  if (hasRealProgress.value) {
-    const tp = props.transcriptionProgress!
-    return `Segment ${tp.completedChunks} / ${tp.totalChunks} — ${progressPercent.value}%`
-  }
   return FILLER_MESSAGES[fillerIndex.value % FILLER_MESSAGES.length]
 })
 
@@ -108,6 +110,7 @@ function formatSize(dp: DownloadProgress) {
       <div class="indeterminate-bar"></div>
     </div>
     <div id="status-text" class="status-text">{{ status }}</div>
+    <div v-if="progressInfo" class="progress-info">{{ progressInfo }}</div>
     <transition name="fade" mode="out-in">
       <div v-if="subStatus" :key="subStatus" class="sub-status">{{ subStatus }}</div>
     </transition>
@@ -192,6 +195,12 @@ function formatSize(dp: DownloadProgress) {
 .status-text {
   color: var(--secondary-text);
   font-size: 14px;
+}
+
+.progress-info {
+  color: var(--secondary-text);
+  font-size: 13px;
+  margin-top: 6px;
 }
 
 .sub-status {
