@@ -8,6 +8,7 @@ import SessionList from './components/SessionList.vue'
 import ModelSelector from './components/ModelSelector.vue'
 import { DEFAULT_MODEL, DEFAULT_DTYPE } from './models'
 import { useTranscriber } from './composables/useTranscriber'
+import { useBackendTranscriber } from './composables/useBackendTranscriber'
 import type { TranscribeResult } from './composables/useTranscriber'
 import { useFileUpload } from './composables/useFileUpload'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
@@ -17,7 +18,30 @@ import { createLogger } from './utils/logger'
 
 const log = createLogger('App')
 
-const { status, result, error, isProcessing, modelInfo, downloadProgress, transcriptionTimeSec, transcriptionProgress, transcribe, resetError } = useTranscriber()
+const workerTranscriber = useTranscriber()
+const backendTranscriber = useBackendTranscriber()
+const useBackend = ref(false)
+
+const activeTranscriber = computed(() => useBackend.value ? backendTranscriber : workerTranscriber)
+const status = computed(() => activeTranscriber.value.status.value)
+const result = computed({
+  get: () => activeTranscriber.value.result.value,
+  set: (v) => { activeTranscriber.value.result.value = v },
+})
+const error = computed({
+  get: () => activeTranscriber.value.error.value,
+  set: (v) => { activeTranscriber.value.error.value = v },
+})
+const isProcessing = computed({
+  get: () => activeTranscriber.value.isProcessing.value,
+  set: (v) => { activeTranscriber.value.isProcessing.value = v },
+})
+const modelInfo = computed(() => activeTranscriber.value.modelInfo.value)
+const downloadProgress = computed(() => activeTranscriber.value.downloadProgress.value)
+const transcriptionTimeSec = computed(() => activeTranscriber.value.transcriptionTimeSec.value)
+const transcriptionProgress = computed(() => activeTranscriber.value.transcriptionProgress.value)
+const resetError = () => activeTranscriber.value.resetError()
+
 const { handleFile } = useFileUpload()
 
 const selectedModel = ref(DEFAULT_MODEL)
@@ -28,6 +52,8 @@ const audioUrl = ref('')
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
 const isAudioStuck = ref(false)
 const appError = ref<string | null>(null)
+const backendChecked = ref(false)
+const backendAvailable = ref(false)
 
 // Session state (display)
 const sessions = ref<Session[]>([])
@@ -87,7 +113,7 @@ const onFileSelected = async (file: File) => {
   viewedTranscript.value = null
   displayTranscriptionTime.value = null
   isProcessing.value = true
-  status.value = 'Reading file...'
+  activeTranscriber.value.status.value = 'Reading file...'
 
   try {
     revokeAudioUrl()
@@ -104,8 +130,12 @@ const onFileSelected = async (file: File) => {
       ...sessions.value,
     ]
 
-    log.info(`New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value})`)
-    transcribe(audioData, selectedModel.value, selectedDtype.value, useVad.value)
+    log.info(`New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value}, backend=${useBackend.value})`)
+    if (useBackend.value) {
+      backendTranscriber.transcribe(file, undefined, useVad.value)
+    } else {
+      workerTranscriber.transcribe(audioData, selectedModel.value, selectedDtype.value, useVad.value)
+    }
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
@@ -247,6 +277,14 @@ onMounted(async () => {
   } catch (err: unknown) {
     log.error('Failed to load sessions', err)
   }
+
+  const detected = await backendTranscriber.checkBackend()
+  backendChecked.value = true
+  backendAvailable.value = detected
+  if (detected) {
+    useBackend.value = true
+    log.info('Backend detected, using GPU transcription')
+  }
 })
 
 onUnmounted(() => {
@@ -268,13 +306,23 @@ onUnmounted(() => {
       <div class="container">
         <header>
           <h1>Vibe Transcription</h1>
-          <div class="subtitle">Local, private, in-browser audio transcription</div>
+          <div class="subtitle">Local, private audio transcription</div>
           <ModelSelector
             v-model:model-id="selectedModel"
             v-model:dtype="selectedDtype"
             :disabled="isProcessing"
           />
-          <div class="vad-toggle">
+          <div class="option-toggles">
+            <label class="toggle-label">
+              <input
+                id="backend-toggle"
+                type="checkbox"
+                :checked="useBackend"
+                :disabled="isProcessing"
+                @change="useBackend = ($event.target as HTMLInputElement).checked"
+              />
+              <span>GPU backend{{ backendTranscriber.backendInfo.value ? ` (${backendTranscriber.backendInfo.value.device})` : '' }}</span>
+            </label>
             <label class="toggle-label">
               <input
                 id="vad-toggle"
@@ -287,6 +335,10 @@ onUnmounted(() => {
             </label>
           </div>
         </header>
+
+        <div v-if="backendChecked && !backendAvailable" id="backend-warning" class="warning-banner">
+          GPU backend is unreachable. Falling back to in-browser transcription.
+        </div>
 
         <div v-show="displayError" id="error-container" class="error-container">
           {{ displayError }}
@@ -390,6 +442,16 @@ h1 {
   font-size: 14px;
 }
 
+.warning-banner {
+  background-color: #fef7e0;
+  color: #8a6d00;
+  padding: var(--spacing-unit);
+  border-radius: var(--radius);
+  margin-bottom: var(--spacing-unit);
+  text-align: center;
+  font-size: 14px;
+}
+
 .error-container {
   background-color: #fce8e6;
   color: var(--error-color);
@@ -406,9 +468,10 @@ h1 {
   margin-bottom: calc(var(--spacing-unit) / 2);
 }
 
-.vad-toggle {
+.option-toggles {
   display: flex;
   justify-content: center;
+  gap: calc(var(--spacing-unit) * 1.5);
   margin-top: 8px;
 }
 

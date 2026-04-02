@@ -28,7 +28,9 @@ let fillerTimer: ReturnType<typeof setInterval> | null = null
 const isTranscribing = computed(() =>
   props.status === 'Transcribing…' ||
   props.status.startsWith('Transcribing segment') ||
-  props.status === 'Detecting speech segments…'
+  props.status === 'Detecting speech segments…' ||
+  props.status === 'Transcribing...' ||
+  props.status.startsWith('Transcribing... ')
 )
 
 const hasRealProgress = computed(() => {

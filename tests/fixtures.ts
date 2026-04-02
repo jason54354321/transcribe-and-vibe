@@ -127,6 +127,7 @@ export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
   await page.route('**/*silero*.onnx', (route) => route.abort());
   await page.route('**/ort-wasm*.wasm', (route) => route.abort());
   await page.route('**/ort-wasm*.mjs', (route) => route.abort());
+  await page.route('**/api/info', (route) => route.abort());
 
   await page.route(/\/worker\b/, (route) =>
     route.fulfill({ contentType: 'application/javascript', body: script }),
@@ -135,6 +136,7 @@ export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
 
 export async function setupBrokenWorker(page: Page) {
   await page.addInitScript(BROWSER_MOCKS_SCRIPT);
+  await page.route('**/api/info', (route) => route.abort());
 
   await page.route(/\/worker\b/, (route) =>
     route.fulfill({ contentType: 'application/javascript', body: 'throw new Error("CDN failed to load");' }),

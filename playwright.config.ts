@@ -28,6 +28,12 @@ export default defineConfig({
       use: { headless: true },
     },
     {
+      name: 'backend',
+      testMatch: 'backend.spec.ts',
+      timeout: 120_000,
+      use: { headless: true },
+    },
+    {
       name: 'benchmark',
       testMatch: 'benchmark/**/*.spec.ts',
       timeout: 900_000,
