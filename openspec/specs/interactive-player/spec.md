@@ -1,40 +1,40 @@
 ## Purpose
 
-Define the canonical requirements for the interactive transcript player UI, including upload interaction, progress display, transcript rendering, click-to-seek playback, highlighting, audio controls, and responsive static deployment.
+Define the canonical requirements for the interactive transcript player UI, including upload interaction, progress display, transcript rendering, click-to-seek playback, highlighting, and audio controls.
 
 ## Requirements
 
 ### Requirement: Drag-and-drop audio upload
-The system SHALL provide a drag-and-drop zone on the main page for selecting audio files. The system SHALL also provide a file picker button as fallback. The drop zone SHALL display visual feedback (highlight) when a file is dragged over it. Upon file selection, the system SHALL immediately begin transcription via the Web Worker.
+The system SHALL provide a drag-and-drop zone on the main page for selecting audio files. The system SHALL also provide a file picker button as fallback. The drop zone SHALL display visual feedback (highlight) when a file is dragged over it. Upon file selection, the system SHALL upload the audio to the backend and begin transcription.
 
 #### Scenario: Drag MP3 onto drop zone
 - **WHEN** user drags an MP3 file onto the drop zone area
-- **THEN** drop zone shows visual highlight during dragover, and upon drop the transcription begins automatically
+- **THEN** drop zone shows visual highlight during dragover, and upon drop the audio is uploaded to the backend for transcription
 
 #### Scenario: Click to select file
 - **WHEN** user clicks the file picker button and selects an audio file
-- **THEN** transcription begins immediately after file selection
+- **THEN** audio is uploaded to the backend and transcription begins
 
 #### Scenario: Non-audio file dropped
 - **WHEN** user drops a non-audio file (e.g., .pdf) onto the drop zone
 - **THEN** system shows an error message indicating only audio files are accepted
 
 ### Requirement: Transcription progress indication
-The system SHALL show a loading/progress indicator while audio is being transcribed in the Web Worker. The indicator SHALL clearly communicate that processing is in progress and SHALL display status messages from the Worker (e.g., "Loading model...", "Transcribing...").
+The system SHALL show a loading/progress indicator while audio is being transcribed by the backend. The indicator SHALL clearly communicate that processing is in progress and SHALL display status messages from the backend SSE stream (e.g., "Loading model...", "Transcribing 45%...").
 
 #### Scenario: Long transcription in progress
-- **WHEN** user selects a 10-minute audio file and the Worker is processing
-- **THEN** a visible loading indicator with status text is displayed until the transcription result is received
+- **WHEN** user selects a 10-minute audio file and the backend is processing
+- **THEN** a visible loading indicator with status text is displayed, updated from SSE events
 
 #### Scenario: Transcription completes
-- **WHEN** the Web Worker posts the transcription result
+- **WHEN** the backend sends the final result SSE event
 - **THEN** loading indicator is removed and the transcript is rendered
 
 ### Requirement: Clickable word-level transcript rendering
 The system SHALL render the transcription as a series of clickable word `<span>` elements. Each word span SHALL contain `data-start` (start time in milliseconds) and `data-end` (end time in milliseconds) attributes. Words SHALL be visually grouped by segments (sentence/phrase), with paragraph breaks between segments.
 
 #### Scenario: Transcript rendered after transcription
-- **WHEN** transcription result is received from the Worker
+- **WHEN** transcription result is received from the backend
 - **THEN** each word is rendered as a `<span>` element with `data-start` and `data-end` attributes, words within a segment are space-separated, and segments are visually separated as paragraphs
 
 #### Scenario: Word hover feedback
@@ -73,17 +73,6 @@ The system SHALL include a standard HTML5 audio player with native controls (pla
 #### Scenario: Native controls functional
 - **WHEN** user interacts with the audio player controls (play, pause, seek, volume)
 - **THEN** playback responds accordingly and transcript highlight stays in sync
-
-### Requirement: Static self-contained frontend
-The system SHALL consist of two files: `index.html` (UI, CSS, main JS) and `worker.js` (transformers.js transcription logic). The system SHALL load transformers.js from CDN via ES module import. No build step, no bundler, no `node_modules` SHALL be required. The files SHALL be servable from any static file server or opened directly.
-
-#### Scenario: Serve from static server
-- **WHEN** files are served from any HTTP static file server
-- **THEN** the complete application loads and functions correctly
-
-#### Scenario: Offline operation after first load
-- **WHEN** user has loaded the page and the Whisper model is cached in IndexedDB
-- **THEN** the application works fully without internet access (CDN scripts are browser-cached, model is in IndexedDB)
 
 ### Requirement: Responsive layout
 The system SHALL display properly on both desktop and mobile browsers. The transcript area SHALL be scrollable when content exceeds viewport height. The audio player SHALL remain accessible (sticky or always visible) while scrolling through the transcript.
