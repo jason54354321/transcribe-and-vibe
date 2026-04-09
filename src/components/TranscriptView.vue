@@ -75,6 +75,16 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+const paragraphOffsets = computed(() => {
+  const offsets: number[] = []
+  let cumulative = 0
+  for (const para of paragraphs.value) {
+    offsets.push(cumulative)
+    cumulative += para.length
+  }
+  return offsets
+})
+
 const activeIndex = ref(-1)
 
 watch(() => props.currentTimeMs, (time) => {
@@ -99,6 +109,11 @@ watch(() => props.currentTimeMs, (time) => {
     }
   }
 
+  // In a gap between words — keep highlighting the previous word
+  if (found === -1 && high >= 0 && time >= words[high].end) {
+    found = high
+  }
+
   activeIndex.value = found
 })
 
@@ -120,7 +135,7 @@ const handleContentClick = (e: MouseEvent) => {
           v-for="(word, wIndex) in para" 
           :key="`${pIndex}-${wIndex}`"
           class="word"
-          :class="{ active: flatWords.indexOf(word) === activeIndex }"
+          :class="{ active: paragraphOffsets[pIndex] + wIndex === activeIndex }"
           :data-start="word.start"
           :data-end="word.end"
           :title="`${formatTime(word.startSec)} - ${formatTime(word.endSec)}`"
