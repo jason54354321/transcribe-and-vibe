@@ -15,7 +15,7 @@ RESET='\033[0m'
 find_free_port() {
   local port=$1
   while lsof -ti:"$port" >/dev/null 2>&1; do
-    echo -e "${DIM}Port $port in use, trying $((port + 1))...${RESET}"
+    echo -e "${DIM}Port $port in use, trying $((port + 1))...${RESET}" >&2
     port=$((port + 1))
   done
   echo "$port"

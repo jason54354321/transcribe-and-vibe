@@ -110,7 +110,8 @@ watch(() => props.currentTimeMs, (time) => {
   }
 
   // In a gap between words — keep highlighting the previous word
-  if (found === -1 && high >= 0 && time >= words[high].end) {
+  // But only if there IS a next word (i.e., we're between two words, not past all content)
+  if (found === -1 && high >= 0 && high < words.length - 1 && time >= words[high].end) {
     found = high
   }
 
