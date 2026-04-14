@@ -11,6 +11,7 @@ import { useTranscriber } from './composables/useTranscriber'
 import { useBackendTranscriber } from './composables/useBackendTranscriber'
 import type { TranscribeResult } from './composables/useTranscriber'
 import { useFileUpload } from './composables/useFileUpload'
+import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
 import { saveSession, listSessions, loadSessionData, deleteSession } from './composables/useSessionStore'
 import type { Session } from './composables/useSessionStore'
@@ -54,6 +55,14 @@ const isAudioStuck = ref(false)
 const appError = ref<string | null>(null)
 const backendChecked = ref(false)
 const backendAvailable = ref(false)
+
+const hasAudioSource = computed(() => audioUrl.value !== '')
+
+useKeyboardShortcuts({
+  togglePlay: () => audioPlayerRef.value?.togglePlay(),
+  skip: (d) => audioPlayerRef.value?.skip(d),
+  adjustVolume: (d) => audioPlayerRef.value?.adjustVolume(d),
+}, hasAudioSource)
 
 // Session state (display)
 const sessions = ref<Session[]>([])
@@ -376,6 +385,16 @@ onUnmounted(() => {
         />
       </div>
     </main>
+
+    <Transition name="hints-fade">
+      <div v-show="hasAudioSource" class="keyboard-hints" id="keyboard-hints">
+        <kbd>Space</kbd> play/pause
+        <span class="hint-sep">·</span>
+        <kbd>←</kbd><kbd>→</kbd> ±5s
+        <span class="hint-sep">·</span>
+        <kbd>↑</kbd><kbd>↓</kbd> volume
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -501,5 +520,51 @@ h1 {
   h1 {
     font-size: 20px;
   }
+
+  .keyboard-hints {
+    display: none;
+  }
+}
+
+.keyboard-hints {
+  position: fixed;
+  bottom: calc(var(--spacing-unit) * 0.75);
+  right: calc(var(--spacing-unit) * 0.75);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--secondary-text);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.keyboard-hints kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-color);
+  background: var(--accent-light);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+}
+
+.keyboard-hints .hint-sep {
+  color: var(--border-color);
+}
+
+.hints-fade-enter-active, .hints-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.hints-fade-enter-from, .hints-fade-leave-to {
+  opacity: 0;
 }
 </style>
