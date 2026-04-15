@@ -147,6 +147,8 @@ function formatRelativeTime(timestamp: number): string {
 .sidebar {
   width: 260px;
   height: 100vh;
+  position: sticky;
+  top: 0;
   background: var(--panel-bg);
   border-right: 1px solid var(--divider-color);
   display: flex;
