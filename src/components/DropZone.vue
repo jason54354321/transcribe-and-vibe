@@ -73,7 +73,11 @@ const handleFileChange = (e: Event) => {
   text-align: center;
   transition: all 0.2s ease;
   cursor: pointer;
-  background: #fafafa;
+  background: var(--panel-bg);
+}
+
+.drop-zone:hover {
+  background: var(--hover-bg);
 }
 
 .drop-zone.drag-over {
@@ -88,17 +92,18 @@ const handleFileChange = (e: Event) => {
 
 .btn {
   display: inline-block;
-  background-color: var(--text-color);
-  color: white;
+  background-color: var(--button-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .btn:hover {
-  opacity: 0.9;
+  background-color: var(--button-hover-bg);
 }
 </style>

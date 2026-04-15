@@ -131,7 +131,7 @@ function formatRelativeTime(timestamp: number): string {
   top: calc(var(--spacing-unit) * 1);
   left: calc(var(--spacing-unit) * 1);
   z-index: 100;
-  background: var(--bg-color);
+  background: var(--panel-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   padding: calc(var(--spacing-unit) * 0.5);
@@ -147,8 +147,8 @@ function formatRelativeTime(timestamp: number): string {
 .sidebar {
   width: 260px;
   height: 100vh;
-  background: var(--bg-color);
-  border-right: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  border-right: 1px solid var(--divider-color);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -157,7 +157,7 @@ function formatRelativeTime(timestamp: number): string {
 
 .sidebar-header {
   padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 1);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--divider-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -209,11 +209,11 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 .session-item:hover {
-  background: var(--accent-light);
+  background: var(--hover-bg);
 }
 
 .session-item.is-active {
-  background: var(--accent-light);
+  background: var(--hover-bg);
   border-left-color: var(--accent-color);
 }
 

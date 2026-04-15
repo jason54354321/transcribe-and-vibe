@@ -144,7 +144,8 @@ function formatSize(dp: DownloadProgress) {
   display: inline-block;
   font-size: 12px;
   color: var(--secondary-text);
-  background: var(--accent-light);
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
   padding: 4px 12px;
   border-radius: 12px;
   margin-bottom: 16px;

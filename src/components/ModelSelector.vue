@@ -101,15 +101,16 @@ watch(
   padding: 4px 8px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-color);
+  background: var(--button-bg);
   color: var(--text-color);
   cursor: pointer;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .selector-group select:hover:not(:disabled) {
   border-color: var(--accent-color);
+  background: var(--button-hover-bg);
 }
 
 .selector-group select:focus {

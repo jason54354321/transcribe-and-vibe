@@ -55,7 +55,7 @@ defineExpose({
 .audio-container {
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--sticky-bg);
   backdrop-filter: blur(10px);
   padding: var(--spacing-unit) 0;
   border-bottom: 1px solid transparent;

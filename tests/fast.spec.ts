@@ -74,16 +74,34 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       }
     });
 
-    test('paragraph grouping', async ({ page }) => {
+    test('paragraph grouping and timestamps', async ({ page }) => {
       await uploadTestAudio(page);
 
       const paragraphs = page.locator('#transcript-content > p');
       await expect(paragraphs).toHaveCount(2);
       await expect(paragraphs.nth(0).locator('.word')).toHaveCount(5);
       await expect(paragraphs.nth(1).locator('.word')).toHaveCount(3);
+
+      const timestamps = page.locator('.paragraph-timestamp');
+      await expect(timestamps).toHaveCount(2);
+      await expect(timestamps.nth(0)).toHaveText('0:00');
+      await expect(timestamps.nth(1)).toHaveText('0:02');
     });
 
-    test('click-to-seek', async ({ page }) => {
+    test('click paragraph timestamp seeks audio', async ({ page }) => {
+      await uploadTestAudio(page);
+
+      await page.locator('.paragraph-timestamp').nth(1).click();
+
+      const currentTime = await page.evaluate(() => {
+        const audio = document.getElementById('audio-player') as HTMLAudioElement;
+        return audio.currentTime;
+      });
+
+      expect(currentTime).toBeCloseTo(2.5, 1);
+    });
+
+    test('click-to-seek word', async ({ page }) => {
       await uploadTestAudio(page);
 
       await page.locator('.word').nth(2).click();
@@ -342,6 +360,45 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       // TranscriptView skips chunks with null timestamps (line 34)
       // Only ' Hello' and ' good' have both start+end → 2 words rendered
       await expect(page.locator('.word')).toHaveCount(2);
+    });
+  });
+
+  test.describe('theme switching', () => {
+    test.beforeEach(async ({ page }) => {
+      await setupMockWorker(page);
+      await page.goto('/');
+    });
+
+    test('toggle theme changes data-theme attribute and persists', async ({ page }) => {
+      const html = page.locator('html');
+      
+      await page.evaluate(() => {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.removeItem('vibe-theme');
+      });
+
+      await page.locator('label', { hasText: 'Dark mode' }).locator('input[type="checkbox"]').check();
+      await expect(html).toHaveAttribute('data-theme', 'dark');
+
+      await page.reload();
+      const htmlAfterReload = page.locator('html');
+      await expect(htmlAfterReload).toHaveAttribute('data-theme', 'dark');
+      const toggle = page.locator('label', { hasText: 'Dark mode' }).locator('input[type="checkbox"]');
+      await expect(toggle).toBeChecked();
+
+      await toggle.uncheck();
+      await expect(htmlAfterReload).toHaveAttribute('data-theme', 'light');
+
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    });
+
+    test('drop zone button keeps readable contrast in dark mode', async ({ page }) => {
+      await page.locator('#theme-toggle').check();
+
+      const button = page.locator('#drop-zone .btn')
+      await expect(button).toHaveCSS('background-color', 'rgb(43, 47, 49)')
+      await expect(button).toHaveCSS('color', 'rgb(232, 230, 227)')
     });
   });
 

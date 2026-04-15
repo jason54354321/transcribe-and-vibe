@@ -49,6 +49,13 @@ const selectedModel = ref(DEFAULT_MODEL)
 const selectedDtype = ref(DEFAULT_DTYPE)
 const useVad = ref(true)
 
+const currentTheme = ref('light')
+const toggleTheme = () => {
+  currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light'
+  document.documentElement.setAttribute('data-theme', currentTheme.value)
+  localStorage.setItem('vibe-theme', currentTheme.value)
+}
+
 const audioUrl = ref('')
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
 const isAudioStuck = ref(false)
@@ -280,6 +287,16 @@ const handleScroll = () => {
 
 onMounted(async () => {
   window.addEventListener('scroll', handleScroll)
+  
+  const savedTheme = localStorage.getItem('vibe-theme')
+  if (savedTheme) {
+    currentTheme.value = savedTheme
+    document.documentElement.setAttribute('data-theme', savedTheme)
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme.value = 'dark'
+    document.documentElement.setAttribute('data-theme', 'dark')
+  }
+
   try {
     sessions.value = await listSessions()
     log.info(`Loaded ${sessions.value.length} session(s)`)
@@ -342,6 +359,15 @@ onUnmounted(() => {
               />
               <span>VAD preprocessing</span>
             </label>
+            <label class="toggle-label">
+              <input
+                id="theme-toggle"
+                type="checkbox"
+                :checked="currentTheme === 'dark'"
+                @change="toggleTheme"
+              />
+              <span>Dark mode</span>
+            </label>
           </div>
         </header>
 
@@ -402,15 +428,49 @@ onUnmounted(() => {
 :root {
   --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --bg-color: #ffffff;
+  --panel-bg: #f5f5f5;
+  --button-bg: #f5f5f5;
+  --button-hover-bg: #ebebeb;
   --text-color: #1a1a1a;
-  --accent-color: #0066cc;
+  --accent-color: #0b6fcc;
   --accent-light: #e6f0fa;
+  --accent-soft: #d8e8f6;
+  --accent-soft-border: #b7d1ea;
   --border-color: #e5e5e5;
+  --divider-color: #d9d9d9;
   --secondary-text: #666666;
   --error-color: #d93025;
+  --error-bg: #fce8e6;
+  --warning-color: #8a6d00;
+  --warning-bg: #fef7e0;
   --success-color: #188038;
   --radius: 8px;
   --spacing-unit: 16px;
+  --hover-bg: #f0f0f0;
+  --sticky-bg: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-color: #181a1b;
+  --panel-bg: #1e2021;
+  --button-bg: #2b2f31;
+  --button-hover-bg: #32373a;
+  --text-color: #d8d4cf;
+  --accent-color: #0b6fcc;
+  --accent-light: #1f425e;
+  --accent-soft: #1f3447;
+  --accent-soft-border: #34506b;
+  --border-color: #545b5e;
+  --divider-color: #3a3f42;
+  --secondary-text: #b2aba1;
+  --error-color: #ff7b72;
+  --error-bg: #3a1d1d;
+  --warning-color: #e0b15a;
+  --warning-bg: #3a2f1b;
+  --success-color: #7ccf8a;
+  --hover-bg: #232628;
+  --sticky-bg: rgba(24, 26, 27, 0.95);
 }
 
 * {
@@ -462,8 +522,8 @@ h1 {
 }
 
 .warning-banner {
-  background-color: #fef7e0;
-  color: #8a6d00;
+  background-color: var(--warning-bg);
+  color: var(--warning-color);
   padding: var(--spacing-unit);
   border-radius: var(--radius);
   margin-bottom: var(--spacing-unit);
@@ -472,7 +532,7 @@ h1 {
 }
 
 .error-container {
-  background-color: #fce8e6;
+  background-color: var(--error-bg);
   color: var(--error-color);
   padding: var(--spacing-unit);
   border-radius: var(--radius);
@@ -536,7 +596,7 @@ h1 {
   padding: 6px 12px;
   font-size: 11px;
   color: var(--secondary-text);
-  background: var(--bg-color);
+  background: var(--panel-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   opacity: 0.7;
@@ -551,7 +611,7 @@ h1 {
   font-size: 10px;
   line-height: 1.4;
   color: var(--text-color);
-  background: var(--accent-light);
+  background: var(--button-bg);
   border: 1px solid var(--border-color);
   border-radius: 3px;
 }

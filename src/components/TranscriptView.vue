@@ -120,7 +120,7 @@ watch(() => props.currentTimeMs, (time) => {
 
 const handleContentClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement
-  const span = target.closest('.word') as HTMLElement | null
+  const span = target.closest('.word, .paragraph-timestamp') as HTMLElement | null
   if (span && span.dataset.start) {
     emit('seek', parseInt(span.dataset.start, 10))
   }
@@ -132,6 +132,11 @@ const handleContentClick = (e: MouseEvent) => {
     <div id="meta-info" class="meta-info">{{ metaInfoText }}</div>
     <div id="transcript-content" class="transcript-content" @click="handleContentClick">
       <p v-for="(para, pIndex) in paragraphs" :key="pIndex">
+        <span 
+          v-if="para.length > 0" 
+          class="paragraph-timestamp" 
+          :data-start="para[0].start"
+        >{{ formatTime(para[0].startSec) }}</span>
         <span 
           v-for="(word, wIndex) in para" 
           :key="`${pIndex}-${wIndex}`"
@@ -163,11 +168,27 @@ const handleContentClick = (e: MouseEvent) => {
 .transcript-content {
   font-size: 18px;
   line-height: 1.8;
-  color: #333;
+  color: var(--text-color);
 }
 
 .transcript-content p {
   margin-bottom: var(--spacing-unit);
+  position: relative;
+}
+
+.paragraph-timestamp {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--secondary-text);
+  font-weight: 500;
+  margin-right: 8px;
+  user-select: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.paragraph-timestamp:hover {
+  color: var(--text-color);
 }
 
 .word {
@@ -178,14 +199,14 @@ const handleContentClick = (e: MouseEvent) => {
 }
 
 .word:hover {
-  background-color: #f0f0f0;
-  color: #000;
+  background-color: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .word.active {
   background-color: var(--accent-color);
-  color: white;
-  box-shadow: 0 0 0 2px var(--accent-color);
+  color: var(--text-color);
+  box-shadow: 0 0 0 1px var(--accent-soft-border);
 }
 
 @media (max-width: 600px) {
