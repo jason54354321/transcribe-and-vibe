@@ -6,7 +6,7 @@ import AudioPlayer from './components/AudioPlayer.vue'
 import TranscriptView from './components/TranscriptView.vue'
 import SessionList from './components/SessionList.vue'
 import ModelSelector from './components/ModelSelector.vue'
-import { DEFAULT_MODEL, DEFAULT_DTYPE } from './models'
+import { MODELS, DEFAULT_MODEL, DEFAULT_DTYPE } from './models'
 import { useTranscriber } from './composables/useTranscriber'
 import { useBackendTranscriber } from './composables/useBackendTranscriber'
 import type { TranscribeResult } from './composables/useTranscriber'
@@ -48,6 +48,46 @@ const { handleFile } = useFileUpload()
 const selectedModel = ref(DEFAULT_MODEL)
 const selectedDtype = ref(DEFAULT_DTYPE)
 const useVad = ref(true)
+
+const backendModelOptions = computed(() =>
+  backendTranscriber.backendInfo.value?.available_models.map(model => ({
+    id: model.id,
+    label: model.label,
+  })) ?? [],
+)
+
+const visibleModelOptions = computed(() =>
+  useBackend.value && backendModelOptions.value.length > 0
+    ? backendModelOptions.value
+    : Object.entries(MODELS).map(([id, cfg]) => ({ id, label: cfg.label })),
+)
+
+const showPrecisionSelector = computed(() => !useBackend.value)
+const backendModelIds = computed(() => new Set(backendModelOptions.value.map(model => model.id)))
+const canUseBackend = computed(() => backendAvailable.value && backendTranscriber.backendInfo.value !== null)
+
+const ensureSelectedModelMatchesMode = () => {
+  if (useBackend.value) {
+    const backendInfo = backendTranscriber.backendInfo.value
+    if (!backendInfo) return
+
+    const availableIds = new Set(backendInfo.available_models.map(model => model.id))
+    if (!availableIds.has(selectedModel.value)) {
+      selectedModel.value = backendInfo.default_model
+    }
+    return
+  }
+
+  if (!(selectedModel.value in MODELS)) {
+    selectedModel.value = DEFAULT_MODEL
+  }
+}
+
+const resolvedBackendModel = computed(() => {
+  const backendInfo = backendTranscriber.backendInfo.value
+  if (!backendInfo) return undefined
+  return backendModelIds.value.has(selectedModel.value) ? selectedModel.value : backendInfo.default_model
+})
 
 const currentTheme = ref('light')
 const toggleTheme = () => {
@@ -148,7 +188,7 @@ const onFileSelected = async (file: File) => {
 
     log.info(`New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value}, backend=${useBackend.value})`)
     if (useBackend.value) {
-      backendTranscriber.transcribe(file, undefined, useVad.value)
+      backendTranscriber.transcribe(file, resolvedBackendModel.value, useVad.value)
     } else {
       workerTranscriber.transcribe(audioData, selectedModel.value, selectedDtype.value, useVad.value)
     }
@@ -281,6 +321,10 @@ const onSeek = (ms: number) => {
   audioPlayerRef.value?.seekTo(ms)
 }
 
+watch([useBackend, () => backendTranscriber.backendInfo.value], () => {
+  ensureSelectedModelMatchesMode()
+}, { immediate: true })
+
 const handleScroll = () => {
   isAudioStuck.value = window.scrollY > 0
 }
@@ -309,6 +353,7 @@ onMounted(async () => {
   backendAvailable.value = detected
   if (detected) {
     useBackend.value = true
+    ensureSelectedModelMatchesMode()
     log.info('Backend detected, using GPU transcription')
   }
 })
@@ -336,6 +381,8 @@ onUnmounted(() => {
           <ModelSelector
             v-model:model-id="selectedModel"
             v-model:dtype="selectedDtype"
+            :models="visibleModelOptions"
+            :show-dtype="showPrecisionSelector"
             :disabled="isProcessing"
           />
           <div class="option-toggles">
@@ -344,7 +391,7 @@ onUnmounted(() => {
                 id="backend-toggle"
                 type="checkbox"
                 :checked="useBackend"
-                :disabled="isProcessing"
+                :disabled="isProcessing || !canUseBackend"
                 @change="useBackend = ($event.target as HTMLInputElement).checked"
               />
               <span>GPU backend{{ backendTranscriber.backendInfo.value ? ` (${backendTranscriber.backendInfo.value.device})` : '' }}</span>

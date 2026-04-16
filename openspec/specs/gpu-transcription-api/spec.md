@@ -20,22 +20,22 @@ The system SHALL expose a `POST /api/transcribe` endpoint that accepts audio via
 - **THEN** server responds with HTTP 400 and a JSON error body `{ "error": "Unsupported audio format" }`
 
 ### Requirement: SSE progress streaming
-The system SHALL stream transcription progress to the client via Server-Sent Events on the same `POST /api/transcribe` response. Progress events SHALL include: `model-loading`, `transcribing` (with percentage), `transcription-progress` (chunk-level), and `result` (final transcript). The SSE stream SHALL close after the result event.
+The system SHALL stream transcription progress to the client via Server-Sent Events on the same `POST /api/transcribe` response. Progress events SHALL include: `model-loading`, `model-info` (with the actual model ID and runtime precision selected for the active transcription job), `transcribing` (with percentage), `transcription-progress` (chunk-level), and `result` (final transcript). The SSE stream SHALL close after the result event.
 
 #### Scenario: Progress events during transcription
 - **WHEN** a 3-minute audio file is being transcribed
-- **THEN** client receives SSE events in order: `model-loading` → `transcribing` (0-100%) → `result` with final transcript JSON
+- **THEN** client receives SSE events in order: `model-loading` → `model-info` → `transcribing` (0-100%) → `result` with final transcript JSON
 
 #### Scenario: Error during transcription
 - **WHEN** transcription fails mid-stream (e.g., corrupted audio)
 - **THEN** server sends an SSE `error` event with message and closes the stream
 
 ### Requirement: Transcription result format
-The system SHALL return results in the same JSON shape as the existing Worker protocol: `{ text: string, chunks: Array<{ text: string, timestamp: [number, number] }> }`. Timestamps SHALL be in seconds. Word-level timestamps SHALL be provided when available.
+The system SHALL return results in the same JSON shape as the existing Worker protocol, while also including backend execution metadata: `{ text: string, chunks: Array<{ text: string, timestamp: [number, number] }>, model: string, dtype: string }`. Timestamps SHALL be in seconds. Word-level timestamps SHALL be provided when available. The `model` and `dtype` fields SHALL describe the actual backend model ID and runtime precision used for that transcription job.
 
-#### Scenario: Result matches existing format
+#### Scenario: Result matches existing format with backend metadata
 - **WHEN** transcription completes for an English audio file
-- **THEN** result JSON contains `text` (full transcript) and `chunks` array with word-level entries, each having `text` and `timestamp: [start, end]` in seconds
+- **THEN** result JSON contains `text` (full transcript), `chunks` array with word-level entries and `timestamp: [start, end]` in seconds, plus `model` and `dtype` describing the actual backend execution
 
 ### Requirement: Model and VAD selection via query parameters
 The system SHALL accept optional query parameters `model` (model ID from registry) and `vad` (boolean, default true). If `model` is omitted, the system SHALL use the default model for the detected hardware. If `vad=false`, the system SHALL skip VAD preprocessing.

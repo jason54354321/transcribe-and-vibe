@@ -17,13 +17,20 @@ class TranscribeWord:
 @dataclass
 class TranscribeResult:
     text: str
-    chunks: list[dict]  # [{ text: str, timestamp: [float, float] }]
+    chunks: list[dict[str, object]]  # [{ text: str, timestamp: [float, float] }]
+    model: str
+    dtype: str
 
-    def to_dict(self) -> dict:
-        return {'text': self.text, 'chunks': self.chunks}
+    def to_dict(self) -> dict[str, object]:
+        return {
+            'text': self.text,
+            'chunks': self.chunks,
+            'model': self.model,
+            'dtype': self.dtype,
+        }
 
 
-ProgressCallback = Callable[[str, dict], None]
+ProgressCallback = Callable[[str, dict[str, object]], None]
 """Callback signature: (event_type, data_dict)"""
 
 

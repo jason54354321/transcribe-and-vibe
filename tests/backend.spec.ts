@@ -36,6 +36,7 @@ test.describe('Backend GPU Transcription', () => {
 
     const toggleLabel = page.locator('label', { has: toggle })
     await expect(toggleLabel).toContainText(/Apple|NVIDIA|GPU/i)
+    await expect(page.locator('#dtype-select')).toHaveCount(0)
   })
 
   test('upload → backend transcribes → transcript renders', async ({ page }) => {
@@ -55,7 +56,13 @@ test.describe('Backend GPU Transcription', () => {
 
     // Verify SSE progress events appear in StatusBar before transcript is ready
     const statusText = page.locator('#status-text')
-    await expect(statusText).toContainText(/Transcribing|Loading model/, { timeout: 60_000 })
+    const modelBadge = page.locator('#model-badge')
+    await Promise.all([
+      expect(statusText).toContainText(/Transcribing|Loading model/, { timeout: 60_000 }),
+      expect(modelBadge).toBeVisible({ timeout: 60_000 }),
+    ])
+    await expect(modelBadge).toContainText(/(large-v3-turbo|large-v3|small|base) · [A-Za-z0-9._-]+/)
+    await expect(modelBadge).not.toContainText('whisper-small_timestamped')
 
     const transcriptContainer = page.locator('#transcript-container')
     const errorContainer = page.locator('#error-container')

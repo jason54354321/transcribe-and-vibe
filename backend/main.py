@@ -35,7 +35,7 @@ VALID_AUDIO_TYPES = {
 VALID_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.ogg', '.webm', '.flac'}
 MAX_FILE_SIZE = 100 * 1024 * 1024
 
-_SENTINEL = object()
+_SENTINEL = None
 
 hardware: HardwareInfo | None = None
 engine: TranscriptionEngine | None = None
@@ -71,7 +71,7 @@ app.add_middleware(
 )
 
 
-def _sse_event(event: str, data: dict) -> str:
+def _sse_event(event: str, data: dict[str, object]) -> str:
     return f'event: {event}\ndata: {json.dumps(data)}\n\n'
 
 
@@ -92,11 +92,11 @@ def _run_transcription(
     audio_path: str,
     model_id: str,
     use_vad: bool,
-    q: queue.Queue,
+    q: queue.Queue[str | None],
 ) -> None:
     """Run transcription in a thread, pushing SSE events into the queue."""
     try:
-        def on_progress(event_type: str, data: dict) -> None:
+        def on_progress(event_type: str, data: dict[str, object]) -> None:
             q.put(_sse_event(event_type, data))
 
         result = eng.transcribe(
@@ -144,10 +144,8 @@ async def transcribe(
                 tmp.write(content)
                 tmp_path = tmp.name
 
-            yield _sse_event('model-loading', {'status': f'Loading model {model_id}...'})
-
             assert engine is not None
-            q: queue.Queue = queue.Queue()
+            q: queue.Queue[str | None] = queue.Queue()
 
             thread = threading.Thread(
                 target=_run_transcription,
@@ -161,6 +159,7 @@ async def transcribe(
                 item = await loop.run_in_executor(None, q.get)
                 if item is _SENTINEL:
                     break
+                assert isinstance(item, str)
                 yield item
 
         except Exception as e:

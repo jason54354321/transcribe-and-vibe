@@ -2,10 +2,24 @@
 import { computed, watch } from 'vue'
 import { MODELS } from '../models'
 
+type ModelOption = {
+  id: string
+  label: string
+}
+
+type DtypeOption = {
+  key: string
+  label: string
+  size?: number
+}
+
 const props = defineProps<{
   modelId: string
   dtype: string
   disabled?: boolean
+  models?: ModelOption[]
+  dtypes?: DtypeOption[]
+  showDtype?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -14,10 +28,11 @@ const emit = defineEmits<{
 }>()
 
 const modelEntries = computed(() =>
-  Object.entries(MODELS).map(([id, cfg]) => ({ id, label: cfg.label })),
+  props.models ?? Object.entries(MODELS).map(([id, cfg]) => ({ id, label: cfg.label })),
 )
 
 const currentDtypes = computed(() => {
+  if (props.dtypes) return props.dtypes
   const cfg = MODELS[props.modelId]
   if (!cfg) return []
   return Object.entries(cfg.dtypes).map(([key, info]) => ({
@@ -36,6 +51,7 @@ function formatSize(mb: number): string {
 watch(
   () => props.modelId,
   (newModelId) => {
+    if (props.dtypes || props.showDtype === false) return
     const cfg = MODELS[newModelId]
     if (cfg && !(props.dtype in cfg.dtypes)) {
       emit('update:dtype', 'q8')
@@ -59,7 +75,7 @@ watch(
         </option>
       </select>
     </div>
-    <div class="selector-group">
+    <div v-if="showDtype !== false" class="selector-group">
       <label for="dtype-select">Precision</label>
       <select
         id="dtype-select"
@@ -68,7 +84,7 @@ watch(
         @change="emit('update:dtype', ($event.target as HTMLSelectElement).value)"
       >
         <option v-for="d in currentDtypes" :key="d.key" :value="d.key">
-          {{ d.label }} ({{ formatSize(d.size) }})
+          {{ d.size != null ? `${d.label} (${formatSize(d.size)})` : d.label }}
         </option>
       </select>
     </div>

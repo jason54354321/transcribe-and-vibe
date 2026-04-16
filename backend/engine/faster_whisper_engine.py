@@ -62,7 +62,12 @@ class FasterWhisperEngine(TranscriptionEngine):
         use_vad: bool = True,
         on_progress: ProgressCallback | None = None,
     ) -> TranscribeResult:
+        config = get_model(model_id)
+        compute = self._compute_type or config.default_compute_type
         model = self._get_model(model_id, on_progress)
+
+        if on_progress:
+            on_progress('model-info', {'model': model_id, 'dtype': compute})
 
         if on_progress:
             on_progress('transcribing', {'status': 'Transcribing...'})
@@ -95,4 +100,4 @@ class FasterWhisperEngine(TranscriptionEngine):
 
         full_text = ''.join(w['text'] for w in all_words)
 
-        return TranscribeResult(text=full_text, chunks=all_words)
+        return TranscribeResult(text=full_text, chunks=all_words, model=model_id, dtype=compute)

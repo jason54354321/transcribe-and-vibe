@@ -1,8 +1,4 @@
-## Purpose
-
-Define the canonical requirements for the frontend transcription client that communicates with the GPU backend, including audio upload, SSE progress streaming, result rendering, and connection health checks.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Upload audio to backend
 The frontend SHALL upload the selected audio file to the backend `POST /api/transcribe` endpoint via `fetch` with multipart/form-data. The upload SHALL include the selected model ID and VAD toggle state as query parameters.
@@ -28,14 +24,3 @@ The frontend SHALL parse the final `result` SSE event and pass the transcript da
 #### Scenario: Transcript rendered from backend result
 - **WHEN** backend sends the final result SSE event
 - **THEN** TranscriptView renders the transcript with word-level click-to-seek, identical to the current Worker-based flow, and the current session retains the backend-reported model and precision in the status UI
-
-### Requirement: Backend connection health check
-The frontend SHALL check backend availability on page load via `GET /api/info`. If unreachable, the frontend SHALL display a persistent warning banner.
-
-#### Scenario: Backend available on load
-- **WHEN** page loads and `GET /api/info` succeeds
-- **THEN** no warning is shown, model/hardware info is displayed
-
-#### Scenario: Backend unavailable on load
-- **WHEN** page loads and `GET /api/info` fails
-- **THEN** a warning banner is displayed: "Backend not running. Start it with: cd backend && python -m uvicorn main:app"

@@ -4,6 +4,8 @@ import { createLogger } from '../utils/logger'
 export type TranscribeResult = {
   text: string
   chunks: Array<{ text: string; timestamp: [number | null, number | null] }>
+  model?: string
+  dtype?: string
 }
 
 export type ModelInfo = {

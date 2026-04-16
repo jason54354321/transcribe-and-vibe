@@ -67,9 +67,15 @@ export function useBackendTranscriber() {
     return events
   }
 
+  const setModelInfo = (data: Partial<ModelInfo>) => {
+    if (typeof data.model !== 'string' || typeof data.dtype !== 'string') return
+    modelInfo.value = { model: data.model, dtype: data.dtype }
+  }
+
   const transcribe = async (file: File, modelId?: string, useVad = true) => {
     error.value = null
     result.value = null
+    modelInfo.value = null
     isProcessing.value = true
     downloadProgress.value = {}
     transcriptionTimeSec.value = null
@@ -126,6 +132,9 @@ export function useBackendTranscriber() {
             case 'model-loading':
               status.value = data.status
               break
+            case 'model-info':
+              setModelInfo(data)
+              break
             case 'transcribing':
               status.value = data.status
               if (data.progress != null) {
@@ -137,6 +146,7 @@ export function useBackendTranscriber() {
               break
             case 'result':
               result.value = data
+              setModelInfo(data)
               if (transcribeStartTime !== null) {
                 transcriptionTimeSec.value = (performance.now() - transcribeStartTime) / 1000
                 log.info(`Transcription complete (${transcriptionTimeSec.value.toFixed(1)}s, ${data.chunks.length} chunks)`)
