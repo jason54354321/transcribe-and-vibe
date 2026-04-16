@@ -8,6 +8,24 @@ async function transcribeAndWaitForSession(page: Page) {
   await expect(page.locator('.session-item')).toHaveCount(1);
 }
 
+async function setupMockWorkerWithBackendAvailable(page: Page) {
+  await setupMockWorker(page)
+  await page.route('**/api/info', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      hardware: 'apple_silicon',
+      device: 'Apple M4',
+      memory_gb: 16,
+      engine: 'mlx-whisper',
+      default_model: 'large-v3-turbo',
+      available_models: [
+        { id: 'large-v3-turbo', label: 'Large V3 Turbo', description: '', vram_mb: 1500 },
+        { id: 'small', label: 'Small', description: '', vram_mb: 500 },
+      ],
+    }),
+  }))
+}
+
 declare const Buffer: {
   from(input: string): Uint8Array;
 };
@@ -298,6 +316,39 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       await expect(page.locator('.empty-state')).toBeVisible();
       await expect(page.locator('#drop-zone')).toBeVisible();
     });
+
+    test('switching mode after completed transcription preserves displayed transcript', async ({ page }) => {
+      await setupMockWorkerWithBackendAvailable(page)
+      await page.goto('/')
+
+      await expect(page.locator('#backend-toggle')).toBeChecked()
+      await page.locator('#backend-toggle').uncheck()
+
+      await transcribeAndWaitForSession(page)
+      await expect(page.locator('.word')).toHaveCount(8)
+
+      await page.locator('#backend-toggle').check()
+      await expect(page.locator('#transcript-container')).toBeVisible()
+      await expect(page.locator('.word')).toHaveCount(8)
+    })
+
+    test('switching mode after restoring a saved session preserves displayed transcript', async ({ page }) => {
+      await setupMockWorkerWithBackendAvailable(page)
+      await page.goto('/')
+
+      await expect(page.locator('#backend-toggle')).toBeChecked()
+      await page.locator('#backend-toggle').uncheck()
+
+      await transcribeAndWaitForSession(page)
+      await page.locator('.new-btn').click()
+      await page.locator('.session-item').click()
+      await expect(page.locator('#transcript-container')).toBeVisible()
+      await expect(page.locator('.word')).toHaveCount(8)
+
+      await page.locator('#backend-toggle').check()
+      await expect(page.locator('#transcript-container')).toBeVisible()
+      await expect(page.locator('.word')).toHaveCount(8)
+    })
   });
 
   test.describe('Oracle bug regression tests', () => {
