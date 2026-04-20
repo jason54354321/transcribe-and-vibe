@@ -14,6 +14,7 @@ const props = defineProps<{
   visibleModelOptions: ModelOption[]
   showPrecisionSelector: boolean
   backendInfo: BackendInfo | null
+  isHighlightEnabled: boolean
 }>()
 
 const emit = defineEmits<{
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   'update:dtype': [value: string]
   'update:useBackend': [value: boolean]
   'update:useVad': [value: boolean]
+  'update:isHighlightEnabled': [value: boolean]
   'toggleTheme': []
 }>()
 </script>
@@ -67,6 +69,15 @@ const emit = defineEmits<{
           @change="emit('toggleTheme')"
         />
         <span>Dark mode</span>
+      </label>
+      <label class="toggle-label">
+        <input
+          id="highlight-toggle"
+          type="checkbox"
+          :checked="props.isHighlightEnabled"
+          @change="emit('update:isHighlightEnabled', ($event.target as HTMLInputElement).checked)"
+        />
+        <span>Word highlight</span>
       </label>
     </div>
   </header>

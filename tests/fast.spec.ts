@@ -166,6 +166,43 @@ test.describe('Vibe Transcription - Fast Loop', () => {
     });
   });
 
+  test.describe('highlight preference', () => {
+    test.beforeEach(async ({ page }) => {
+      await setupMockWorker(page);
+      await page.goto('/');
+    });
+
+    test('toggle word highlight turns off active class', async ({ page }) => {
+      await uploadTestAudio(page);
+      await expect(page.locator('#transcript-container')).toBeVisible();
+
+      await page.evaluate(() => {
+        const audio = document.getElementById('audio-player') as HTMLAudioElement;
+        Object.defineProperty(audio, 'currentTime', { value: 0.5, writable: true, configurable: true });
+        audio.dispatchEvent(new Event('timeupdate'));
+      });
+
+      await expect(page.locator('.word.active')).toHaveCount(1);
+
+      await page.locator('label', { hasText: 'Word highlight' }).locator('input[type="checkbox"]').uncheck();
+
+      await expect(page.locator('.word.active')).toHaveCount(0);
+
+      await page.locator('label', { hasText: 'Word highlight' }).locator('input[type="checkbox"]').check();
+
+      await expect(page.locator('.word.active')).toHaveCount(1);
+    });
+
+    test('preference persists after reload', async ({ page }) => {
+      await page.locator('label', { hasText: 'Word highlight' }).locator('input[type="checkbox"]').uncheck();
+
+      await page.reload();
+
+      const toggle = page.locator('label', { hasText: 'Word highlight' }).locator('input[type="checkbox"]');
+      await expect(toggle).not.toBeChecked();
+    });
+  });
+
   test.describe('custom mock worker', () => {
     test('progress UI during transcription', async ({ page }) => {
       await setupMockWorker(page, { delay: 2000 });

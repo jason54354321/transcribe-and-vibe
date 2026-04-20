@@ -69,11 +69,11 @@ The system SHALL highlight the currently spoken word during audio playback by ap
 
 #### Scenario: Active word highlighted in light theme
 - **WHEN** audio plays and the current word is highlighted in light mode
-- **THEN** the word shows a muted accent-derived background with readable text color, not an unreadable or overly aggressive solid block
+- **THEN** the word shows a distinct accent-colored highlight with readable text color so the current playback position remains obvious during guided review
 
 #### Scenario: Active word highlighted in dark theme
 - **WHEN** audio plays and the current word is highlighted in dark mode
-- **THEN** the word remains clearly visible against the transcript while using a muted Dark-Reader-inspired accent treatment
+- **THEN** the word remains clearly visible against the transcript while preserving the same strong accent-highlight treatment used to track the current playback word
 
 ### Requirement: Paragraph timestamp click-to-seek
 The system SHALL seek the audio player to a paragraph's start time when the paragraph-start timestamp span is clicked. The paragraph timestamp span SHALL include a `data-start` attribute containing the paragraph's start time in milliseconds, consistent with word spans, so the same click-to-seek handler processes it without special-casing.

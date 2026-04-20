@@ -52,6 +52,19 @@ const {
 const { handleFile } = useFileUpload()
 const { currentTheme, toggleTheme, initializeTheme } = useTheme()
 const { audioUrl, isAudioStuck, hasAudioSource, revokeAudioUrl } = useStickyAudio()
+const isHighlightEnabled = ref(true)
+
+const initializeHighlight = () => {
+  const saved = localStorage.getItem('vibe-highlight')
+  if (saved !== null) {
+    isHighlightEnabled.value = saved === 'true'
+  }
+}
+
+watch(isHighlightEnabled, (enabled) => {
+  localStorage.setItem('vibe-highlight', String(enabled))
+})
+
 const displayedResult = ref<TranscribeResult | null>(null)
 const sessionOrchestration = useSessionOrchestration({
   transcriberResult,
@@ -148,6 +161,7 @@ const onSeek = (ms: number) => {
 
 onMounted(async () => {
   initializeTheme()
+  initializeHighlight()
 
   try {
     await initializeSessions()
@@ -184,10 +198,12 @@ onMounted(async () => {
           :visible-model-options="visibleModelOptions"
           :show-precision-selector="showPrecisionSelector"
           :backend-info="backendTranscriber.backendInfo.value"
+          :is-highlight-enabled="isHighlightEnabled"
           @update:model-id="selectedModel = $event"
           @update:dtype="selectedDtype = $event"
           @update:use-backend="useBackend = $event"
           @update:use-vad="useVad = $event"
+          @update:is-highlight-enabled="isHighlightEnabled = $event"
           @toggle-theme="toggleTheme"
         />
 
@@ -227,6 +243,7 @@ onMounted(async () => {
           v-show="showTranscript && displayedResult"
           :chunks="displayedResult?.chunks || []"
           :currentTimeMs="audioPlayerRef?.currentTimeMs || 0"
+          :is-highlight-enabled="isHighlightEnabled"
           @seek="onSeek"
         />
       </div>

@@ -6,6 +6,7 @@ type Chunk = { text: string; timestamp: [number | null, number | null] }
 const props = defineProps<{
   chunks: Chunk[]
   currentTimeMs: number
+  isHighlightEnabled: boolean
 }>()
 
 const emit = defineEmits<{
@@ -141,7 +142,7 @@ const handleContentClick = (e: MouseEvent) => {
           v-for="(word, wIndex) in para" 
           :key="`${pIndex}-${wIndex}`"
           class="word"
-          :class="{ active: paragraphOffsets[pIndex] + wIndex === activeIndex }"
+          :class="{ active: props.isHighlightEnabled && paragraphOffsets[pIndex] + wIndex === activeIndex }"
           :data-start="word.start"
           :data-end="word.end"
           :title="`${formatTime(word.startSec)} - ${formatTime(word.endSec)}`"
