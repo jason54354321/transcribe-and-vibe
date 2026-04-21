@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 // @ts-ignore Runtime module is available in Playwright.
 import path from 'path';
 
@@ -146,4 +146,28 @@ export async function setupBrokenWorker(page: Page) {
 export async function uploadTestAudio(page: Page) {
   const fileInput = page.locator('#file-input');
   await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_vibe.m4a'));
+}
+
+export async function transcribeAndWaitForSession(page: Page) {
+  await uploadTestAudio(page);
+  await expect(page.locator('#transcript-container')).toBeVisible();
+  await expect(page.locator('.session-item')).toHaveCount(1);
+}
+
+export async function setupMockWorkerWithBackendAvailable(page: Page) {
+  await setupMockWorker(page);
+  await page.route('**/api/info', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      hardware: 'apple_silicon',
+      device: 'Apple M4',
+      memory_gb: 16,
+      engine: 'mlx-whisper',
+      default_model: 'large-v3-turbo',
+      available_models: [
+        { id: 'large-v3-turbo', label: 'Large V3 Turbo', description: '', vram_mb: 1500 },
+        { id: 'small', label: 'Small', description: '', vram_mb: 500 },
+      ],
+    }),
+  }));
 }
