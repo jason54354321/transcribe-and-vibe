@@ -17,7 +17,7 @@ Local audio transcription powered by [Whisper](https://github.com/openai/whisper
 
 ## Prerequisites
 
-- **Node.js** ≥ 20 (or [Bun](https://bun.sh/) ≥ 1.x)
+- **[Bun](https://bun.sh/)** ≥ 1.x
 - **Python** ≥ 3.9 (for GPU backend only)
 - **ffmpeg** (for GPU backend — `brew install ffmpeg` on macOS)
 
@@ -115,23 +115,23 @@ Requires the GPU backend running on port 8000 (or set `BACKEND_PORT`):
 cd backend && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
 
 # Run backend tests (4 tests)
-npx playwright test --project=backend
+bunx playwright test --project=backend
 ```
 
 ### Running a Single Test
 
 ```bash
 # Playwright — by name
-npx playwright test --project=fast -g "file upload shows transcript"
+bunx playwright test --project=fast -g "file upload shows transcript"
 
 # Playwright — by file
-npx playwright test tests/fast.spec.ts --project=fast
+bunx playwright test tests/fast.spec.ts --project=fast
 
 # Vitest — by file
-npx vitest run src/utils/vadPipeline.test.ts
+bunx vitest run src/utils/vadPipeline.test.ts
 
 # Vitest — by name
-npx vitest run -t "merges two segments"
+bunx vitest run -t "merges two segments"
 ```
 
 ## Project Structure
@@ -180,7 +180,7 @@ tests/
 
 - [ ] `bun run build` passes (includes `vue-tsc` type-check)
 - [ ] `bun run test` passes (fast tests)
-- [ ] Backend tests pass if backend code changed: `npx playwright test --project=backend`
+- [ ] Backend tests pass if backend code changed: `bunx playwright test --project=backend`
 
 ## Tech Stack
 

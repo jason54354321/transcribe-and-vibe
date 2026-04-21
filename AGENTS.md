@@ -5,12 +5,12 @@ Audio transcription app with dual-mode architecture: **GPU-accelerated backend**
 ## Build & Test Commands
 
 ```bash
-npm run dev              # Vite dev server on localhost:5173 (proxies /api → backend:8000)
-npm run build            # vue-tsc type-check + vite build (MUST pass before PR)
-npm run test             # Playwright fast tests (mock worker, ~10s, 26 tests)
-npm run test:slow        # Playwright slow tests (real Whisper model, ~20s, downloads ~150MB on first run)
-npm run test:all         # All Playwright projects
-npm run test:unit        # Vitest unit tests (src/**/*.test.ts)
+bun run dev              # Vite dev server on localhost:5173 (proxies /api → backend:8000)
+bun run build            # vue-tsc type-check + vite build (MUST pass before PR)
+bun run test             # Playwright fast tests (mock worker, ~10s, 26 tests)
+bun run test:slow        # Playwright slow tests (real Whisper model, ~20s, downloads ~150MB on first run)
+bun run test:all         # All Playwright projects
+bun run test:unit        # Vitest unit tests (src/**/*.test.ts)
 ```
 
 ### Backend commands
@@ -23,29 +23,29 @@ cd backend && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ./dev.sh                 # default port 8000; PORT=9000 ./dev.sh for custom
 
 # Backend integration tests (requires backend running on port 8000)
-npx playwright test --project=backend
+bunx playwright test --project=backend
 ```
 
 ### Running a single test
 
 ```bash
 # Playwright — by test name substring
-npx playwright test --project=fast -g "file upload shows transcript"
+bunx playwright test --project=fast -g "file upload shows transcript"
 
 # Playwright — by file
-npx playwright test tests/fast.spec.ts --project=fast
+bunx playwright test tests/fast.spec.ts --project=fast
 
 # Vitest — by file
-npx vitest run src/utils/vadPipeline.test.ts
+bunx vitest run src/utils/vadPipeline.test.ts
 
 # Vitest — by test name
-npx vitest run -t "merges two segments"
+bunx vitest run -t "merges two segments"
 ```
 
 ### Type checking only
 
 ```bash
-npx vue-tsc -b          # Same check as `npm run build` first step
+bunx vue-tsc -b          # Same check as `bun run build` first step
 ```
 
 ## Project Structure
@@ -123,7 +123,7 @@ Both `useTranscriber` and `useBackendTranscriber` expose the same reactive inter
 
 ### Worker pipeline (in-browser mode)
 
-- `src/worker.ts` is Vite-bundled and runs VAD (Silero via `@ricky0123/vad-web`, npm-bundled) → segment merging → Whisper ASR (`@huggingface/transformers@3`, CDN dynamic import via `/* @vite-ignore */`). Keeps ~50–100 MB of ONNX/WASM runtime off the main thread.
+- `src/worker.ts` is Vite-bundled and runs VAD (Silero via `@ricky0123/vad-web`, package-managed dependency) → segment merging → Whisper ASR (`@huggingface/transformers@3`, CDN dynamic import via `/* @vite-ignore */`). Keeps ~50–100 MB of ONNX/WASM runtime off the main thread.
 - **VAD fallback**: If VAD fails to load (ONNX model unavailable), the worker falls back to treating the entire audio as one segment.
 - **Worker instantiation**: `new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' })` — Vite resolves and bundles the worker at build time.
 - **CDN types**: `src/transformers-cdn.d.ts` provides ambient module declarations for the CDN URL, enabling full type safety on the dynamic import.
@@ -134,7 +134,7 @@ IndexedDB via `idb` library. 3-store schema: `sessions` (metadata), `sessionBlob
 
 ## Code Style
 
-No ESLint or Prettier configured. Follow these conventions observed in the codebase:
+ESLint and Prettier are configured. Follow these conventions observed in the codebase:
 
 ### Formatting
 - 2-space indentation
@@ -206,7 +206,7 @@ import type { VadSegment } from '../utils/vadPipeline'
 - Require a running backend (`cd backend && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000`)
 - Verify auto-detection (`#backend-toggle` checked), SSE progress, transcript rendering, click-to-seek
 - Test fallback warning banner when backend is unreachable (route abort)
-- 120s timeout; run via `npx playwright test --project=backend`
+- 120s timeout; run via `bunx playwright test --project=backend`
 
 ### Unit tests (Vitest)
 - Co-located with source: `src/utils/foo.test.ts` tests `src/utils/foo.ts`
@@ -216,11 +216,11 @@ import type { VadSegment } from '../utils/vadPipeline'
 ### Slow tests (Playwright)
 - No mocking — real Vite-bundled worker, real Whisper model download
 - 300s timeout; captures console errors and page errors
-- Only run explicitly via `npm run test:slow`
+- Only run explicitly via `bun run test:slow`
 
 ### Benchmark tests (Playwright)
 - WER (Word Error Rate) evaluation against reference transcripts
-- 900s timeout; run via `npx playwright test --project=benchmark`
+- 900s timeout; run via `bunx playwright test --project=benchmark`
 
 ## Worker Protocol (src/worker.ts) — In-browser mode only
 
