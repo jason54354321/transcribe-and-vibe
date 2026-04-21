@@ -1,0 +1,14 @@
+backend/
+.opencode/
+openspec/
+AGENTS.md
+README.md
+feature-todo.md
+backend/.venv/
+dist/
+node_modules/
+playwright-report/
+test-results/
+tests/benchmark/results/
+public/worker.js
+package-lock.json
