@@ -68,7 +68,9 @@ test.describe('Backend GPU Transcription', () => {
     const errorContainer = page.locator('#error-container')
 
     const outcome = await Promise.race([
-      transcriptContainer.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'transcript' as const),
+      transcriptContainer
+        .waitFor({ state: 'visible', timeout: 120_000 })
+        .then(() => 'transcript' as const),
       errorContainer.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'error' as const),
     ])
 
@@ -76,8 +78,8 @@ test.describe('Backend GPU Transcription', () => {
       const errorText = await errorContainer.textContent()
       const allErrors = [
         `UI error: ${errorText}`,
-        ...consoleErrors.map(e => `console.error: ${e}`),
-        ...pageErrors.map(e => `page error: ${e}`),
+        ...consoleErrors.map((e) => `console.error: ${e}`),
+        ...pageErrors.map((e) => `page error: ${e}`),
       ].join('\n')
       test.fail(true, `Transcription failed:\n${allErrors}`)
       return
@@ -106,7 +108,7 @@ test.describe('Backend GPU Transcription', () => {
     await page.locator('#transcript-container').waitFor({ state: 'visible', timeout: 120_000 })
 
     const words = page.locator('.word')
-    const midWord = words.nth(Math.floor(await words.count() / 2))
+    const midWord = words.nth(Math.floor((await words.count()) / 2))
     const expectedStartMs = Number(await midWord.getAttribute('data-start'))
 
     await midWord.click()

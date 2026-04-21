@@ -1,11 +1,11 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test'
 // @ts-ignore Runtime module is available in Playwright.
-import path from 'path';
+import path from 'path'
 
-declare const __dirname: string;
+declare const __dirname: string
 
-export const MOCK_MODEL_ID = 'onnx-community/whisper-small_timestamped';
-export const MOCK_DTYPE = 'q8';
+export const MOCK_MODEL_ID = 'onnx-community/whisper-small_timestamped'
+export const MOCK_DTYPE = 'q8'
 
 export const MOCK_CHUNKS = [
   { text: ' Hello', timestamp: [0.0, 0.42] },
@@ -16,26 +16,26 @@ export const MOCK_CHUNKS = [
   { text: ' test', timestamp: [2.5, 2.82] },
   { text: ' of', timestamp: [2.82, 3.0] },
   { text: ' transcription', timestamp: [3.0, 3.62] },
-] as const;
+] as const
 
-export const MOCK_TEXT = ' Hello world this is a test of transcription';
+export const MOCK_TEXT = ' Hello world this is a test of transcription'
 
 export type MockWorkerOptions = {
-  delay?: number;
-  error?: string;
-  downloadDelay?: number;
-  chunks?: Array<{ text: string; timestamp: [number | null, number | null] }>;
-  text?: string;
-  totalChunks?: number;
-};
+  delay?: number
+  error?: string
+  downloadDelay?: number
+  chunks?: Array<{ text: string; timestamp: [number | null, number | null] }>
+  text?: string
+  totalChunks?: number
+}
 
 export function getMockWorkerScript(options?: MockWorkerOptions) {
-  const delay = options?.delay ?? 0;
-  const error = options?.error;
-  const downloadDelay = options?.downloadDelay ?? 0;
-  const chunks = options?.chunks ?? MOCK_CHUNKS;
-  const text = options?.text ?? MOCK_TEXT;
-  const segments = options?.totalChunks ?? 0;
+  const delay = options?.delay ?? 0
+  const error = options?.error
+  const downloadDelay = options?.downloadDelay ?? 0
+  const chunks = options?.chunks ?? MOCK_CHUNKS
+  const text = options?.text ?? MOCK_TEXT
+  const segments = options?.totalChunks ?? 0
 
   return `
 const MOCK_TEXT = ${JSON.stringify(text)};
@@ -92,7 +92,7 @@ self.addEventListener('message', async (event) => {
     },
   });
 });
-`;
+`
 }
 
 const BROWSER_MOCKS_SCRIPT = `
@@ -117,57 +117,62 @@ const BROWSER_MOCKS_SCRIPT = `
     if (window.HTMLMediaElement) {
       window.HTMLMediaElement.prototype.play = function() { return Promise.resolve(); };
     }
-`;
+`
 
 export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
-  const script = getMockWorkerScript(options);
+  const script = getMockWorkerScript(options)
 
-  await page.addInitScript(BROWSER_MOCKS_SCRIPT);
+  await page.addInitScript(BROWSER_MOCKS_SCRIPT)
 
-  await page.route('**/*silero*.onnx', (route) => route.abort());
-  await page.route('**/ort-wasm*.wasm', (route) => route.abort());
-  await page.route('**/ort-wasm*.mjs', (route) => route.abort());
-  await page.route('**/api/info', (route) => route.abort());
+  await page.route('**/*silero*.onnx', (route) => route.abort())
+  await page.route('**/ort-wasm*.wasm', (route) => route.abort())
+  await page.route('**/ort-wasm*.mjs', (route) => route.abort())
+  await page.route('**/api/info', (route) => route.abort())
 
   await page.route(/\/worker\b/, (route) =>
     route.fulfill({ contentType: 'application/javascript', body: script }),
-  );
+  )
 }
 
 export async function setupBrokenWorker(page: Page) {
-  await page.addInitScript(BROWSER_MOCKS_SCRIPT);
-  await page.route('**/api/info', (route) => route.abort());
+  await page.addInitScript(BROWSER_MOCKS_SCRIPT)
+  await page.route('**/api/info', (route) => route.abort())
 
   await page.route(/\/worker\b/, (route) =>
-    route.fulfill({ contentType: 'application/javascript', body: 'throw new Error("CDN failed to load");' }),
-  );
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: 'throw new Error("CDN failed to load");',
+    }),
+  )
 }
 
 export async function uploadTestAudio(page: Page) {
-  const fileInput = page.locator('#file-input');
-  await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_vibe.m4a'));
+  const fileInput = page.locator('#file-input')
+  await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_vibe.m4a'))
 }
 
 export async function transcribeAndWaitForSession(page: Page) {
-  await uploadTestAudio(page);
-  await expect(page.locator('#transcript-container')).toBeVisible();
-  await expect(page.locator('.session-item')).toHaveCount(1);
+  await uploadTestAudio(page)
+  await expect(page.locator('#transcript-container')).toBeVisible()
+  await expect(page.locator('.session-item')).toHaveCount(1)
 }
 
 export async function setupMockWorkerWithBackendAvailable(page: Page) {
-  await setupMockWorker(page);
-  await page.route('**/api/info', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({
-      hardware: 'apple_silicon',
-      device: 'Apple M4',
-      memory_gb: 16,
-      engine: 'mlx-whisper',
-      default_model: 'large-v3-turbo',
-      available_models: [
-        { id: 'large-v3-turbo', label: 'Large V3 Turbo', description: '', vram_mb: 1500 },
-        { id: 'small', label: 'Small', description: '', vram_mb: 500 },
-      ],
+  await setupMockWorker(page)
+  await page.route('**/api/info', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        hardware: 'apple_silicon',
+        device: 'Apple M4',
+        memory_gb: 16,
+        engine: 'mlx-whisper',
+        default_model: 'large-v3-turbo',
+        available_models: [
+          { id: 'large-v3-turbo', label: 'Large V3 Turbo', description: '', vram_mb: 1500 },
+          { id: 'small', label: 'Small', description: '', vram_mb: 500 },
+        ],
+      }),
     }),
-  }));
+  )
 }

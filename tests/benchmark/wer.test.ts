@@ -102,8 +102,8 @@ describe('computeAverageWER', () => {
 
   it('computes weighted average across samples', () => {
     const results = [
-      computeWER('hello world', 'hello world'),           // 0/2 errors
-      computeWER('hello earth', 'hello world'),            // 1/2 errors
+      computeWER('hello world', 'hello world'), // 0/2 errors
+      computeWER('hello earth', 'hello world'), // 1/2 errors
       computeWER('goodbye cruel world', 'hello beautiful world'), // 2/3 errors
     ]
     const avg = computeAverageWER(results)

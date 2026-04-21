@@ -6,7 +6,6 @@ import AudioPlayer from './components/AudioPlayer.vue'
 import TranscriptView from './components/TranscriptView.vue'
 import SessionList from './components/SessionList.vue'
 import TranscriptionControls from './components/TranscriptionControls.vue'
-import { DEFAULT_DTYPE } from './models'
 import type { TranscribeResult } from './composables/useTranscriber'
 import { useFileUpload } from './composables/useFileUpload'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
@@ -16,9 +15,7 @@ import { useStickyAudio } from './composables/useStickyAudio'
 import { useSessionOrchestration } from './composables/useSessionOrchestration'
 import { useTranscriptionMode } from './composables/useTranscriptionMode'
 import { createLogger } from './utils/logger'
-import {
-  formatTranscriptionTimeDisplay,
-} from './utils/sessionOrchestration'
+import { formatTranscriptionTimeDisplay } from './utils/sessionOrchestration'
 
 const log = createLogger('App')
 
@@ -78,14 +75,6 @@ const sessionOrchestration = useSessionOrchestration({
 const {
   sessions,
   activeSessionId,
-  audioBlob,
-  fileName,
-  durationSec,
-  transcribingSessionId,
-  transcribingBlob,
-  transcribingFileName,
-  transcribingDuration,
-  viewedTranscript,
   displayTranscriptionTime,
   showStatus,
   initializeSessions,
@@ -101,11 +90,14 @@ const {
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
 const appError = ref<string | null>(null)
 
-useKeyboardShortcuts({
-  togglePlay: () => audioPlayerRef.value?.togglePlay(),
-  skip: (d) => audioPlayerRef.value?.skip(d),
-  adjustVolume: (d) => audioPlayerRef.value?.adjustVolume(d),
-}, hasAudioSource)
+useKeyboardShortcuts(
+  {
+    togglePlay: () => audioPlayerRef.value?.togglePlay(),
+    skip: (d) => audioPlayerRef.value?.skip(d),
+    adjustVolume: (d) => audioPlayerRef.value?.adjustVolume(d),
+  },
+  hasAudioSource,
+)
 
 const showDropZone = computed(() => !isProcessing.value && !displayedResult.value)
 const showTranscript = computed(() => displayedResult.value !== null)
@@ -114,7 +106,9 @@ const clearAppError = () => {
   appError.value = null
 }
 
-const transcriptionTimeDisplay = computed(() => formatTranscriptionTimeDisplay(displayTranscriptionTime.value))
+const transcriptionTimeDisplay = computed(() =>
+  formatTranscriptionTimeDisplay(displayTranscriptionTime.value),
+)
 
 const onFileSelected = async (file: File) => {
   appError.value = null
@@ -141,11 +135,18 @@ const onFileSelected = async (file: File) => {
     setCurrentAudio(url, blob, dur)
     addTemporarySession(sessionId, file.name, dur)
 
-    log.info(`New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value}, backend=${useBackend.value})`)
+    log.info(
+      `New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value}, backend=${useBackend.value})`,
+    )
     if (useBackend.value) {
       backendTranscriber.transcribe(file, resolvedBackendModel.value, useVad.value)
     } else {
-      workerTranscriber.transcribe(audioData, selectedModel.value, selectedDtype.value, useVad.value)
+      workerTranscriber.transcribe(
+        audioData,
+        selectedModel.value,
+        selectedDtype.value,
+        useVad.value,
+      )
     }
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
@@ -178,13 +179,13 @@ onMounted(async () => {
 
 <template>
   <div class="app-layout">
-      <SessionList
-        :sessions="sessions"
-        :active-session-id="activeSessionId"
-        @select="onSessionSelect($event, clearAppError)"
-        @delete="onSessionDelete($event, clearAppError)"
-        @new-session="onNewSession(clearAppError)"
-      />
+    <SessionList
+      :sessions="sessions"
+      :active-session-id="activeSessionId"
+      @select="onSessionSelect($event, clearAppError)"
+      @delete="onSessionDelete($event, clearAppError)"
+      @new-session="onNewSession(clearAppError)"
+    />
     <main class="main-content">
       <div class="container">
         <TranscriptionControls
@@ -215,10 +216,7 @@ onMounted(async () => {
           {{ displayError }}
         </div>
 
-        <DropZone
-          v-show="showDropZone"
-          @file-selected="onFileSelected"
-        />
+        <DropZone v-show="showDropZone" @file-selected="onFileSelected" />
 
         <StatusBar
           v-show="showStatus"
@@ -235,7 +233,10 @@ onMounted(async () => {
           :class="{ stuck: isAudioStuck }"
         />
 
-        <div v-show="displayedResult && displayTranscriptionTime != null" class="transcription-meta">
+        <div
+          v-show="displayedResult && displayTranscriptionTime != null"
+          class="transcription-meta"
+        >
           Transcribed in {{ transcriptionTimeDisplay }}
         </div>
 
@@ -263,7 +264,7 @@ onMounted(async () => {
 
 <style>
 :root {
-  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --bg-color: #ffffff;
   --panel-bg: #f5f5f5;
   --button-bg: #f5f5f5;
@@ -287,7 +288,7 @@ onMounted(async () => {
   --sticky-bg: rgba(255, 255, 255, 0.95);
 }
 
-[data-theme="dark"] {
+[data-theme='dark'] {
   color-scheme: dark;
   --bg-color: #181a1b;
   --panel-bg: #1e2021;
@@ -400,12 +401,12 @@ h1 {
   cursor: pointer;
 }
 
-.toggle-label input[type="checkbox"] {
+.toggle-label input[type='checkbox'] {
   cursor: pointer;
   accent-color: var(--accent-color);
 }
 
-.toggle-label input[type="checkbox"]:disabled {
+.toggle-label input[type='checkbox']:disabled {
   cursor: not-allowed;
 }
 
@@ -457,11 +458,13 @@ h1 {
   color: var(--border-color);
 }
 
-.hints-fade-enter-active, .hints-fade-leave-active {
+.hints-fade-enter-active,
+.hints-fade-leave-active {
   transition: opacity 0.3s ease;
 }
 
-.hints-fade-enter-from, .hints-fade-leave-to {
+.hints-fade-enter-from,
+.hints-fade-leave-to {
   opacity: 0;
 }
 </style>

@@ -30,11 +30,13 @@ export function useSessionOrchestration(args: SessionOrchestrationArgs) {
   const viewedTranscript = ref<TranscribeResult | null>(null)
   const displayTranscriptionTime = ref<number | null>(null)
 
-  const showStatus = computed(() => args.isProcessing.value && activeSessionId.value === transcribingSessionId.value)
+  const showStatus = computed(
+    () => args.isProcessing.value && activeSessionId.value === transcribingSessionId.value,
+  )
 
   const initializeSessions = async () => {
     sessions.value = await listSessions()
-    log.info(`Loaded ${sessions.value.length} session(s)`) 
+    log.info(`Loaded ${sessions.value.length} session(s)`)
   }
 
   const startTranscriptionSession = (sessionId: string, nextFileName: string) => {
@@ -100,7 +102,7 @@ export function useSessionOrchestration(args: SessionOrchestrationArgs) {
     const data = await loadSessionData(id)
     if (!data) return
 
-    const session = sessions.value.find(item => item.id === id)
+    const session = sessions.value.find((item) => item.id === id)
     args.revokeAudioUrl()
     activeSessionId.value = id
     args.displayedResult.value = data.transcript

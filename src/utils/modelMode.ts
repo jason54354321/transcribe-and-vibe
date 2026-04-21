@@ -11,25 +11,35 @@ export function getWorkerModelOptions(): ModelOption[] {
 }
 
 export function getBackendModelOptions(backendInfo: BackendInfo | null): ModelOption[] {
-  return backendInfo?.available_models.map(model => ({ id: model.id, label: model.label })) ?? []
+  return backendInfo?.available_models.map((model) => ({ id: model.id, label: model.label })) ?? []
 }
 
-export function getVisibleModelOptions(useBackend: boolean, backendOptions: ModelOption[]): ModelOption[] {
+export function getVisibleModelOptions(
+  useBackend: boolean,
+  backendOptions: ModelOption[],
+): ModelOption[] {
   return useBackend && backendOptions.length > 0 ? backendOptions : getWorkerModelOptions()
 }
 
-export function getNormalizedModelForMode(selectedModel: string, useBackend: boolean, backendInfo: BackendInfo | null): string {
+export function getNormalizedModelForMode(
+  selectedModel: string,
+  useBackend: boolean,
+  backendInfo: BackendInfo | null,
+): string {
   if (useBackend) {
     if (!backendInfo) return selectedModel
-    const availableIds = new Set(backendInfo.available_models.map(model => model.id))
+    const availableIds = new Set(backendInfo.available_models.map((model) => model.id))
     return availableIds.has(selectedModel) ? selectedModel : backendInfo.default_model
   }
 
   return selectedModel in MODELS ? selectedModel : DEFAULT_MODEL
 }
 
-export function resolveBackendModel(selectedModel: string, backendInfo: BackendInfo | null): string | undefined {
+export function resolveBackendModel(
+  selectedModel: string,
+  backendInfo: BackendInfo | null,
+): string | undefined {
   if (!backendInfo) return undefined
-  const availableIds = new Set(backendInfo.available_models.map(model => model.id))
+  const availableIds = new Set(backendInfo.available_models.map((model) => model.id))
   return availableIds.has(selectedModel) ? selectedModel : backendInfo.default_model
 }

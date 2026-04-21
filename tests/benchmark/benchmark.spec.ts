@@ -55,7 +55,7 @@ test('ASR benchmark: model × VAD matrix', async ({ page }) => {
         await page.waitForTimeout(500)
         const durationMs = Date.now() - start
 
-        const hypothesis = await page.locator('#transcript-container').textContent() ?? ''
+        const hypothesis = (await page.locator('#transcript-container').textContent()) ?? ''
         const wer = computeWER(hypothesis, sample.reference)
 
         results.push({
@@ -72,7 +72,9 @@ test('ASR benchmark: model × VAD matrix', async ({ page }) => {
         })
 
         console.log(`  WER: ${(wer.wer * 100).toFixed(2)}%`)
-        console.log(`  S=${wer.substitutions} D=${wer.deletions} I=${wer.insertions} (ref=${wer.referenceWords} words)`)
+        console.log(
+          `  S=${wer.substitutions} D=${wer.deletions} I=${wer.insertions} (ref=${wer.referenceWords} words)`,
+        )
         console.log(`  Time: ${(durationMs / 1000).toFixed(1)}s`)
 
         await page.locator('.new-btn').click()
@@ -85,16 +87,18 @@ test('ASR benchmark: model × VAD matrix', async ({ page }) => {
   console.log('BENCHMARK RESULTS')
   console.log('='.repeat(80))
 
-  console.table(results.map(r => ({
-    Model: `${r.model.label} (${r.model.dtype})`,
-    VAD: r.useVad ? 'ON' : 'OFF',
-    Sample: r.sample,
-    'WER %': (r.wer * 100).toFixed(2),
-    S: r.substitutions,
-    D: r.deletions,
-    I: r.insertions,
-    'Time (s)': (r.durationMs / 1000).toFixed(1),
-  })))
+  console.table(
+    results.map((r) => ({
+      Model: `${r.model.label} (${r.model.dtype})`,
+      VAD: r.useVad ? 'ON' : 'OFF',
+      Sample: r.sample,
+      'WER %': (r.wer * 100).toFixed(2),
+      S: r.substitutions,
+      D: r.deletions,
+      I: r.insertions,
+      'Time (s)': (r.durationMs / 1000).toFixed(1),
+    })),
+  )
 
   const resultsDir = path.resolve(__dirname, 'results')
   fs.mkdirSync(resultsDir, { recursive: true })

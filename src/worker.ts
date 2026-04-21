@@ -95,7 +95,10 @@ async function getWhisperPipeline(modelId: string, dtype: string): Promise<ASRPi
 
 let vadInstance: NonRealTimeVAD | null = null
 
-async function detectSpeechSegments(audio: Float32Array, sampleRate: number): Promise<VadSegment[]> {
+async function detectSpeechSegments(
+  audio: Float32Array,
+  sampleRate: number,
+): Promise<VadSegment[]> {
   if (!vadInstance) {
     vadInstance = await NonRealTimeVAD.new({
       positiveSpeechThreshold: 0.2,
@@ -112,7 +115,12 @@ async function detectSpeechSegments(audio: Float32Array, sampleRate: number): Pr
   return segments
 }
 
-async function transcribe(audio: Float32Array, modelId: string, dtype: string, useVad = true): Promise<void> {
+async function transcribe(
+  audio: Float32Array,
+  modelId: string,
+  dtype: string,
+  useVad = true,
+): Promise<void> {
   log.info(`Starting transcription (${audio.length} samples, VAD=${useVad})`)
 
   let segments: VadSegment[]
@@ -150,12 +158,13 @@ async function transcribe(audio: Float32Array, modelId: string, dtype: string, u
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]
-    const statusMsg = segments.length > 1
-      ? `Transcribing segment ${i + 1}/${segments.length}…`
-      : 'Transcribing…'
+    const statusMsg =
+      segments.length > 1 ? `Transcribing segment ${i + 1}/${segments.length}…` : 'Transcribing…'
     postMessage({ type: 'progress', status: statusMsg })
 
-    log.info(`Transcribing segment ${i + 1}/${segments.length} (${(seg.start / 1000).toFixed(1)}s–${(seg.end / 1000).toFixed(1)}s)`)
+    log.info(
+      `Transcribing segment ${i + 1}/${segments.length} (${(seg.start / 1000).toFixed(1)}s–${(seg.end / 1000).toFixed(1)}s)`,
+    )
     const segStart = performance.now()
 
     const segAudio = sliceAudio(audio, seg.start, seg.end, 16000)
@@ -178,13 +187,15 @@ async function transcribe(audio: Float32Array, modelId: string, dtype: string, u
     const offsetS = seg.start / 1000
     allChunks.push(...offsetTimestamps(segResult.chunks, offsetS))
 
-    log.info(`Segment ${i + 1}/${segments.length} done (${((performance.now() - segStart) / 1000).toFixed(1)}s)`)
+    log.info(
+      `Segment ${i + 1}/${segments.length} done (${((performance.now() - segStart) / 1000).toFixed(1)}s)`,
+    )
   }
 
   postMessage({
     type: 'result',
     data: {
-      text: allChunks.map(c => c.text).join(''),
+      text: allChunks.map((c) => c.text).join(''),
       chunks: allChunks,
     },
   })

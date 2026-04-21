@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import type { ModelInfo, DownloadProgress, TranscriptionProgress } from '../composables/useTranscriber'
+import type {
+  ModelInfo,
+  DownloadProgress,
+  TranscriptionProgress,
+} from '../composables/useTranscriber'
 
 const props = defineProps<{
   status: string
@@ -25,12 +29,13 @@ const FILLER_MESSAGES = [
 const fillerIndex = ref(0)
 let fillerTimer: ReturnType<typeof setInterval> | null = null
 
-const isTranscribing = computed(() =>
-  props.status === 'Transcribing…' ||
-  props.status.startsWith('Transcribing segment') ||
-  props.status === 'Detecting speech segments…' ||
-  props.status === 'Transcribing...' ||
-  props.status.startsWith('Transcribing... ')
+const isTranscribing = computed(
+  () =>
+    props.status === 'Transcribing…' ||
+    props.status.startsWith('Transcribing segment') ||
+    props.status === 'Detecting speech segments…' ||
+    props.status === 'Transcribing...' ||
+    props.status.startsWith('Transcribing... '),
 )
 
 const hasRealProgress = computed(() => {
@@ -85,7 +90,7 @@ const modelLabel = computed(() => {
 const downloadFiles = computed(() => {
   const dp = props.downloadProgress
   if (!dp) return []
-  return Object.values(dp).filter(f => f.total > 0)
+  return Object.values(dp).filter((f) => f.total > 0)
 })
 
 const showDownload = computed(() => downloadFiles.value.length > 0)
@@ -173,9 +178,15 @@ function formatSize(dp: DownloadProgress) {
 }
 
 @keyframes slide {
-  0% { left: -30%; }
-  50% { left: 100%; }
-  100% { left: -30%; }
+  0% {
+    left: -30%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: -30%;
+  }
 }
 
 .determinate-track {

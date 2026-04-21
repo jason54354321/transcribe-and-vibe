@@ -20,7 +20,7 @@ const handleDragLeave = () => {
 const handleDrop = (e: DragEvent) => {
   e.preventDefault()
   isDragOver.value = false
-  
+
   const files = e.dataTransfer?.files
   if (files && files.length > 0) {
     emit('file-selected', files[0])
@@ -43,25 +43,29 @@ const handleFileChange = (e: Event) => {
 </script>
 
 <template>
-  <div 
-    id="drop-zone" 
-    class="drop-zone" 
+  <div
+    id="drop-zone"
+    class="drop-zone"
     :class="{ 'drag-over': isDragOver }"
     @dragover="handleDragOver"
     @dragleave="handleDragLeave"
     @drop="handleDrop"
     @click="triggerFileInput"
   >
-    <p>Drag & drop audio file here<br><span style="font-size: 12px; opacity: 0.7">(mp3, wav, m4a, ogg • Max 100MB)</span></p>
+    <p>
+      Drag & drop audio file here<br /><span style="font-size: 12px; opacity: 0.7"
+        >(mp3, wav, m4a, ogg • Max 100MB)</span
+      >
+    </p>
     <div class="btn">Select File</div>
-    <input 
-      type="file" 
-      id="file-input" 
-      ref="fileInput" 
-      hidden 
+    <input
+      type="file"
+      id="file-input"
+      ref="fileInput"
+      hidden
       accept="audio/mpeg,audio/wav,audio/x-m4a,audio/ogg,audio/mp4"
       @change="handleFileChange"
-    >
+    />
   </div>
 </template>
 
@@ -100,7 +104,9 @@ const handleFileChange = (e: Event) => {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .btn:hover {

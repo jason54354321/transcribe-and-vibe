@@ -34,8 +34,8 @@ describe('mergeVadSegments', () => {
   it('merges many small segments into groups (gap-based)', () => {
     const segments = [
       { start: 0, end: 2000 },
-      { start: 3000, end: 5000 },   // gap=1s → merge
-      { start: 6000, end: 8000 },   // gap=1s → merge
+      { start: 3000, end: 5000 }, // gap=1s → merge
+      { start: 6000, end: 8000 }, // gap=1s → merge
       { start: 28000, end: 29000 }, // gap=20s > 3s → split
       { start: 31000, end: 33000 }, // gap=2s → merge
       { start: 34000, end: 36000 }, // gap=1s → merge
@@ -63,18 +63,16 @@ describe('mergeVadSegments', () => {
       { start: 6000, end: 12000 },
     ])
     // 12s total, fits in 15s? 12000 - 0 = 12s ≤ 15s → merged
-    expect(mergeVadSegments(segments, 15)).toEqual([
-      { start: 0, end: 12000 },
-    ])
+    expect(mergeVadSegments(segments, 15)).toEqual([{ start: 0, end: 12000 }])
   })
 
   it('splits all segments when gaps exceed maxGapMs', () => {
     const segments = [
       { start: 0, end: 10000 },
-      { start: 15000, end: 25000 },  // gap=5s > 3s → split
-      { start: 40000, end: 50000 },  // gap=15s > 3s → split
-      { start: 55000, end: 65000 },  // gap=5s > 3s → split
-      { start: 80000, end: 90000 },  // gap=15s > 3s → split
+      { start: 15000, end: 25000 }, // gap=5s > 3s → split
+      { start: 40000, end: 50000 }, // gap=15s > 3s → split
+      { start: 55000, end: 65000 }, // gap=5s > 3s → split
+      { start: 80000, end: 90000 }, // gap=15s > 3s → split
     ]
     expect(mergeVadSegments(segments)).toEqual([
       { start: 0, end: 10000 },
@@ -109,9 +107,7 @@ describe('mergeVadSegments', () => {
       { start: 8000, end: 12000 },
     ])
     // gap=3s ≤ 5s (custom) → merge
-    expect(mergeVadSegments(segments, 30, 5000)).toEqual([
-      { start: 0, end: 12000 },
-    ])
+    expect(mergeVadSegments(segments, 30, 5000)).toEqual([{ start: 0, end: 12000 }])
   })
 
   it('enforces maxDuration even when gap is small', () => {
@@ -129,20 +125,14 @@ describe('mergeVadSegments', () => {
 
 describe('offsetTimestamps', () => {
   it('returns same chunks for zero offset', () => {
-    const chunks = [
-      { text: 'Hello', timestamp: [0, 0.5] as [number, number] },
-    ]
+    const chunks = [{ text: 'Hello', timestamp: [0, 0.5] as [number, number] }]
     const result = offsetTimestamps(chunks, 0)
     expect(result).toBe(chunks) // same reference for zero offset
   })
 
   it('shifts both start and end by offset', () => {
-    const chunks = [
-      { text: 'Hello', timestamp: [0, 0.5] as [number, number] },
-    ]
-    expect(offsetTimestamps(chunks, 2.0)).toEqual([
-      { text: 'Hello', timestamp: [2.0, 2.5] },
-    ])
+    const chunks = [{ text: 'Hello', timestamp: [0, 0.5] as [number, number] }]
+    expect(offsetTimestamps(chunks, 2.0)).toEqual([{ text: 'Hello', timestamp: [2.0, 2.5] }])
   })
 
   it('shifts multiple chunks', () => {
@@ -161,9 +151,7 @@ describe('offsetTimestamps', () => {
   })
 
   it('preserves text field exactly', () => {
-    const chunks = [
-      { text: ' complex text!', timestamp: [0, 1.0] as [number, number] },
-    ]
+    const chunks = [{ text: ' complex text!', timestamp: [0, 1.0] as [number, number] }]
     const result = offsetTimestamps(chunks, 3.0)
     expect(result[0].text).toBe(' complex text!')
     expect(result[0].timestamp).toEqual([3.0, 4.0])
@@ -198,7 +186,7 @@ describe('VAD pipeline integration', () => {
       { text: ' foo', timestamp: [35.0, 35.3] },
       { text: ' bar', timestamp: [35.3, 35.8] },
     ])
-    expect(allChunks.map(c => c.text).join('')).toBe('Hello world foo bar')
+    expect(allChunks.map((c) => c.text).join('')).toBe('Hello world foo bar')
   })
 
   it('no-speech scenario: VAD returns empty → merge returns empty', () => {

@@ -27,8 +27,8 @@ const emit = defineEmits<{
   'update:dtype': [value: string]
 }>()
 
-const modelEntries = computed(() =>
-  props.models ?? Object.entries(MODELS).map(([id, cfg]) => ({ id, label: cfg.label })),
+const modelEntries = computed(
+  () => props.models ?? Object.entries(MODELS).map(([id, cfg]) => ({ id, label: cfg.label })),
 )
 
 const currentDtypes = computed(() => {
@@ -121,7 +121,9 @@ watch(
   color: var(--text-color);
   cursor: pointer;
   outline: none;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .selector-group select:hover:not(:disabled) {

@@ -19,25 +19,41 @@ export function useTranscriptionMode() {
   const backendChecked = ref(false)
   const backendAvailable = ref(false)
 
-  const activeTranscriber = computed(() => useBackend.value ? backendTranscriber : workerTranscriber)
-  const backendModelOptions = computed(() => getBackendModelOptions(backendTranscriber.backendInfo.value))
-  const visibleModelOptions = computed(() => getVisibleModelOptions(useBackend.value, backendModelOptions.value))
+  const activeTranscriber = computed(() =>
+    useBackend.value ? backendTranscriber : workerTranscriber,
+  )
+  const backendModelOptions = computed(() =>
+    getBackendModelOptions(backendTranscriber.backendInfo.value),
+  )
+  const visibleModelOptions = computed(() =>
+    getVisibleModelOptions(useBackend.value, backendModelOptions.value),
+  )
   const showPrecisionSelector = computed(() => !useBackend.value)
-  const canUseBackend = computed(() => backendAvailable.value && backendTranscriber.backendInfo.value !== null)
-  const resolvedBackendModel = computed(() => resolveBackendModel(selectedModel.value, backendTranscriber.backendInfo.value))
+  const canUseBackend = computed(
+    () => backendAvailable.value && backendTranscriber.backendInfo.value !== null,
+  )
+  const resolvedBackendModel = computed(() =>
+    resolveBackendModel(selectedModel.value, backendTranscriber.backendInfo.value),
+  )
 
   const status = computed(() => activeTranscriber.value.status.value)
   const result = computed({
     get: () => activeTranscriber.value.result.value,
-    set: (value) => { activeTranscriber.value.result.value = value },
+    set: (value) => {
+      activeTranscriber.value.result.value = value
+    },
   })
   const error = computed({
     get: () => activeTranscriber.value.error.value,
-    set: (value) => { activeTranscriber.value.error.value = value },
+    set: (value) => {
+      activeTranscriber.value.error.value = value
+    },
   })
   const isProcessing = computed({
     get: () => activeTranscriber.value.isProcessing.value,
-    set: (value) => { activeTranscriber.value.isProcessing.value = value },
+    set: (value) => {
+      activeTranscriber.value.isProcessing.value = value
+    },
   })
   const modelInfo = computed(() => activeTranscriber.value.modelInfo.value)
   const downloadProgress = computed(() => activeTranscriber.value.downloadProgress.value)
@@ -46,7 +62,11 @@ export function useTranscriptionMode() {
   const resetError = () => activeTranscriber.value.resetError()
 
   const ensureSelectedModelMatchesMode = () => {
-    selectedModel.value = getNormalizedModelForMode(selectedModel.value, useBackend.value, backendTranscriber.backendInfo.value)
+    selectedModel.value = getNormalizedModelForMode(
+      selectedModel.value,
+      useBackend.value,
+      backendTranscriber.backendInfo.value,
+    )
   }
 
   const checkBackend = async () => {
@@ -60,9 +80,13 @@ export function useTranscriptionMode() {
     return detected
   }
 
-  watch([useBackend, () => backendTranscriber.backendInfo.value], () => {
-    ensureSelectedModelMatchesMode()
-  }, { immediate: true })
+  watch(
+    [useBackend, () => backendTranscriber.backendInfo.value],
+    () => {
+      ensureSelectedModelMatchesMode()
+    },
+    { immediate: true },
+  )
 
   return {
     workerTranscriber,

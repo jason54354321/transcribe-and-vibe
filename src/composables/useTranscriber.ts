@@ -41,10 +41,7 @@ export function useTranscriber() {
 
   onMounted(() => {
     try {
-      worker = new Worker(
-        new URL('../worker.ts', import.meta.url),
-        { type: 'module' },
-      )
+      worker = new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' })
 
       worker.onerror = (e) => {
         error.value = `Worker error: ${e.message || 'Unknown worker failure'}`
@@ -84,7 +81,9 @@ export function useTranscriber() {
             result.value = msg.data
             if (transcribeStartTime !== null) {
               transcriptionTimeSec.value = (performance.now() - transcribeStartTime) / 1000
-              log.info(`Transcription complete (${transcriptionTimeSec.value.toFixed(1)}s, ${msg.data.chunks.length} chunks)`)
+              log.info(
+                `Transcription complete (${transcriptionTimeSec.value.toFixed(1)}s, ${msg.data.chunks.length} chunks)`,
+              )
             }
             isProcessing.value = false
             downloadProgress.value = {}

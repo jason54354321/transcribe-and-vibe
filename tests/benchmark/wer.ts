@@ -63,8 +63,8 @@ export function computeWER(hypothesis: string, reference: string): WerResult {
       } else {
         dp[i][j] = Math.min(
           dp[i - 1][j - 1] + 1, // substitution
-          dp[i - 1][j] + 1,     // deletion
-          dp[i][j - 1] + 1,     // insertion
+          dp[i - 1][j] + 1, // deletion
+          dp[i][j - 1] + 1, // insertion
         )
       }
     }
@@ -109,7 +109,14 @@ export function computeWER(hypothesis: string, reference: string): WerResult {
  */
 export function computeAverageWER(results: WerResult[]): WerResult {
   if (results.length === 0) {
-    return { wer: 0, substitutions: 0, deletions: 0, insertions: 0, referenceWords: 0, hypothesisWords: 0 }
+    return {
+      wer: 0,
+      substitutions: 0,
+      deletions: 0,
+      insertions: 0,
+      referenceWords: 0,
+      hypothesisWords: 0,
+    }
   }
 
   const totals = results.reduce(
@@ -124,9 +131,10 @@ export function computeAverageWER(results: WerResult[]): WerResult {
   )
 
   return {
-    wer: totals.referenceWords > 0
-      ? (totals.substitutions + totals.deletions + totals.insertions) / totals.referenceWords
-      : 0,
+    wer:
+      totals.referenceWords > 0
+        ? (totals.substitutions + totals.deletions + totals.insertions) / totals.referenceWords
+        : 0,
     ...totals,
   }
 }

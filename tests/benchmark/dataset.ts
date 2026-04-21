@@ -12,10 +12,7 @@ export type LoadedSample = {
 }
 
 /** Lines matching these patterns are stripped from reference transcripts (service watermarks). */
-const METADATA_PATTERNS = [
-  'Transcribed by',
-  'Upgrade to remove',
-]
+const METADATA_PATTERNS = ['Transcribed by', 'Upgrade to remove']
 
 /**
  * Strip metadata / watermark lines from reference text.
@@ -23,7 +20,7 @@ const METADATA_PATTERNS = [
 function stripMetadata(text: string): string {
   return text
     .split('\n')
-    .filter(line => !METADATA_PATTERNS.some(p => line.includes(p)))
+    .filter((line) => !METADATA_PATTERNS.some((p) => line.includes(p)))
     .join('\n')
     .trim()
 }
@@ -34,10 +31,10 @@ function stripMetadata(text: string): string {
  */
 export function loadSamples(sampleIds?: string[]): LoadedSample[] {
   const samples = sampleIds
-    ? BENCHMARK_SAMPLES.filter(s => sampleIds.includes(s.id))
+    ? BENCHMARK_SAMPLES.filter((s) => sampleIds.includes(s.id))
     : BENCHMARK_SAMPLES
 
-  return samples.map(s => {
+  return samples.map((s) => {
     const audioAbsPath = path.resolve(process.cwd(), s.audioPath)
     const refAbsPath = path.resolve(process.cwd(), s.referencePath)
 

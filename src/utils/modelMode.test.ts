@@ -23,8 +23,8 @@ const backendInfo: BackendInfo = {
 describe('modelMode', () => {
   it('returns worker model options from local registry', () => {
     const options = getWorkerModelOptions()
-    expect(options.map(option => option.id)).toContain('onnx-community/whisper-small_timestamped')
-    expect(options.map(option => option.label)).toContain('Small')
+    expect(options.map((option) => option.id)).toContain('onnx-community/whisper-small_timestamped')
+    expect(options.map((option) => option.label)).toContain('Small')
   })
 
   it('returns backend model options from backend info', () => {
@@ -43,17 +43,25 @@ describe('modelMode', () => {
 
   it('normalizes selected model for backend mode', () => {
     expect(getNormalizedModelForMode('small', true, backendInfo)).toBe('small')
-    expect(getNormalizedModelForMode('onnx-community/whisper-small_timestamped', true, backendInfo)).toBe('large-v3-turbo')
+    expect(
+      getNormalizedModelForMode('onnx-community/whisper-small_timestamped', true, backendInfo),
+    ).toBe('large-v3-turbo')
   })
 
   it('normalizes selected model for worker mode', () => {
-    expect(getNormalizedModelForMode('onnx-community/whisper-small_timestamped', false, backendInfo)).toBe('onnx-community/whisper-small_timestamped')
-    expect(getNormalizedModelForMode('small', false, backendInfo)).toBe('onnx-community/whisper-small_timestamped')
+    expect(
+      getNormalizedModelForMode('onnx-community/whisper-small_timestamped', false, backendInfo),
+    ).toBe('onnx-community/whisper-small_timestamped')
+    expect(getNormalizedModelForMode('small', false, backendInfo)).toBe(
+      'onnx-community/whisper-small_timestamped',
+    )
   })
 
   it('resolves backend model with fallback', () => {
     expect(resolveBackendModel('small', backendInfo)).toBe('small')
-    expect(resolveBackendModel('onnx-community/whisper-small_timestamped', backendInfo)).toBe('large-v3-turbo')
+    expect(resolveBackendModel('onnx-community/whisper-small_timestamped', backendInfo)).toBe(
+      'large-v3-turbo',
+    )
     expect(resolveBackendModel('small', null)).toBeUndefined()
   })
 })

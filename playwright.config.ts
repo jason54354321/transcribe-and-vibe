@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
@@ -46,4 +46,4 @@ export default defineConfig({
     port: 5173,
     reuseExistingServer: !process.env.CI,
   },
-});
+})

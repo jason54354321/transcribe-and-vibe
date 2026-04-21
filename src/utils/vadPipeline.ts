@@ -8,7 +8,11 @@ export interface TranscribeChunk {
   timestamp: [number, number]
 }
 
-export function mergeVadSegments(segments: VadSegment[], maxDurationS = 30, maxGapMs = 3000): VadSegment[] {
+export function mergeVadSegments(
+  segments: VadSegment[],
+  maxDurationS = 30,
+  maxGapMs = 3000,
+): VadSegment[] {
   if (segments.length === 0) return []
 
   const maxDurationMs = maxDurationS * 1000
@@ -34,17 +38,19 @@ export function mergeVadSegments(segments: VadSegment[], maxDurationS = 30, maxG
 
 export function offsetTimestamps(chunks: TranscribeChunk[], offsetS: number): TranscribeChunk[] {
   if (offsetS === 0) return chunks
-  return chunks.map(chunk => ({
+  return chunks.map((chunk) => ({
     text: chunk.text,
     timestamp: [chunk.timestamp[0] + offsetS, chunk.timestamp[1] + offsetS] as [number, number],
   }))
 }
 
-export function sliceAudio(audio: Float32Array, startMs: number, endMs: number, sampleRate = 16000): Float32Array {
+export function sliceAudio(
+  audio: Float32Array,
+  startMs: number,
+  endMs: number,
+  sampleRate = 16000,
+): Float32Array {
   const startSample = Math.floor((startMs / 1000) * sampleRate)
   const endSample = Math.ceil((endMs / 1000) * sampleRate)
-  return audio.slice(
-    Math.max(0, startSample),
-    Math.min(audio.length, endSample),
-  )
+  return audio.slice(Math.max(0, startSample), Math.min(audio.length, endSample))
 }

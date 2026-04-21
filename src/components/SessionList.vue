@@ -8,7 +8,7 @@ type Session = {
   durationSec: number
 }
 
-const props = defineProps<{
+defineProps<{
   sessions: Session[]
   activeSessionId: string | null
 }>()
@@ -61,19 +61,11 @@ function formatRelativeTime(timestamp: number): string {
 </script>
 
 <template>
-  <button
-    class="mobile-toggle"
-    @click="toggleSidebar"
-    aria-label="Toggle session sidebar"
-  >
+  <button class="mobile-toggle" @click="toggleSidebar" aria-label="Toggle session sidebar">
     ☰
   </button>
 
-  <div
-    v-if="isOpen"
-    class="sidebar-backdrop"
-    @click="closeSidebar"
-  ></div>
+  <div v-if="isOpen" class="sidebar-backdrop" @click="closeSidebar"></div>
 
   <aside
     id="session-sidebar"
@@ -88,10 +80,8 @@ function formatRelativeTime(timestamp: number): string {
     </div>
 
     <div class="session-list">
-      <div v-if="sessions.length === 0" class="empty-state">
-        No sessions yet
-      </div>
-      
+      <div v-if="sessions.length === 0" class="empty-state">No sessions yet</div>
+
       <div
         v-else
         v-for="session in sessions"
@@ -248,7 +238,9 @@ function formatRelativeTime(timestamp: number): string {
   cursor: pointer;
   padding: 0 calc(var(--spacing-unit) * 0.25);
   opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
 .session-item:hover .delete-btn {

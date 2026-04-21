@@ -149,7 +149,9 @@ export function useBackendTranscriber() {
               setModelInfo(data)
               if (transcribeStartTime !== null) {
                 transcriptionTimeSec.value = (performance.now() - transcribeStartTime) / 1000
-                log.info(`Transcription complete (${transcriptionTimeSec.value.toFixed(1)}s, ${data.chunks.length} chunks)`)
+                log.info(
+                  `Transcription complete (${transcriptionTimeSec.value.toFixed(1)}s, ${data.chunks.length} chunks)`,
+                )
               }
               isProcessing.value = false
               downloadProgress.value = {}

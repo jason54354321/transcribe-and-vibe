@@ -14,10 +14,14 @@ export function prependTemporarySession(sessions: Session[], session: Session): 
 
 export function removeSessionById(sessions: Session[], sessionId: string | null): Session[] {
   if (!sessionId) return sessions
-  return sessions.filter(session => session.id !== sessionId)
+  return sessions.filter((session) => session.id !== sessionId)
 }
 
-export function shouldShowStatus(isProcessing: boolean, activeSessionId: string | null, transcribingSessionId: string | null): boolean {
+export function shouldShowStatus(
+  isProcessing: boolean,
+  activeSessionId: string | null,
+  transcribingSessionId: string | null,
+): boolean {
   return isProcessing && activeSessionId === transcribingSessionId
 }
 

@@ -1,49 +1,46 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test'
 
-import { setupBrokenWorker, setupMockWorker, uploadTestAudio } from '../fixtures';
+import { setupBrokenWorker, setupMockWorker, uploadTestAudio } from '../fixtures'
 
 test.describe('Vibe Transcription - Fast Loop', () => {
   test.describe('Oracle bug regression tests', () => {
     test('C1: object URL is revoked on re-upload', async ({ page }) => {
-      await setupMockWorker(page);
-      await page.goto('/');
+      await setupMockWorker(page)
+      await page.goto('/')
 
       await page.evaluate(() => {
-        (window as any).__revokedUrls = [];
-        const original = URL.revokeObjectURL.bind(URL);
-        URL.revokeObjectURL = function(url: string) {
-          (window as any).__revokedUrls.push(url);
-          return original(url);
-        };
-      });
+        ;(window as any).__revokedUrls = []
+        const original = URL.revokeObjectURL.bind(URL)
+        URL.revokeObjectURL = function (url: string) {
+          ;(window as any).__revokedUrls.push(url)
+          return original(url)
+        }
+      })
 
-      await uploadTestAudio(page);
-      await expect(page.locator('#transcript-container')).toBeVisible();
+      await uploadTestAudio(page)
+      await expect(page.locator('#transcript-container')).toBeVisible()
 
-      const firstUrl = await page.locator('#audio-player').getAttribute('src');
-      expect(firstUrl).toBeTruthy();
+      const firstUrl = await page.locator('#audio-player').getAttribute('src')
+      expect(firstUrl).toBeTruthy()
 
-      await uploadTestAudio(page);
-      await page.waitForFunction(
-        (oldUrl: string) => {
-          const audio = document.getElementById('audio-player');
-          return audio?.getAttribute('src') !== oldUrl;
-        },
-        firstUrl!,
-      );
+      await uploadTestAudio(page)
+      await page.waitForFunction((oldUrl: string) => {
+        const audio = document.getElementById('audio-player')
+        return audio?.getAttribute('src') !== oldUrl
+      }, firstUrl!)
 
-      const revokedUrls: string[] = await page.evaluate(() => (window as any).__revokedUrls);
-      expect(revokedUrls).toContain(firstUrl);
-    });
+      const revokedUrls: string[] = await page.evaluate(() => (window as any).__revokedUrls)
+      expect(revokedUrls).toContain(firstUrl)
+    })
 
     test('C2: worker.onerror shows error and preserves drop zone', async ({ page }) => {
-      await setupBrokenWorker(page);
-      await page.goto('/');
+      await setupBrokenWorker(page)
+      await page.goto('/')
 
-      await expect(page.locator('#error-container')).toBeVisible({ timeout: 5000 });
-      await expect(page.locator('#error-container')).toContainText('Worker error');
-      await expect(page.locator('#drop-zone')).toBeVisible();
-    });
+      await expect(page.locator('#error-container')).toBeVisible({ timeout: 5000 })
+      await expect(page.locator('#error-container')).toContainText('Worker error')
+      await expect(page.locator('#drop-zone')).toBeVisible()
+    })
 
     test('C4: null timestamps in chunks are skipped gracefully', async ({ page }) => {
       await setupMockWorker(page, {
@@ -54,12 +51,12 @@ test.describe('Vibe Transcription - Fast Loop', () => {
           { text: ' good', timestamp: [1.5, 2.0] },
         ],
         text: ' Hello world test good',
-      });
-      await page.goto('/');
-      await uploadTestAudio(page);
+      })
+      await page.goto('/')
+      await uploadTestAudio(page)
 
-      await expect(page.locator('#transcript-container')).toBeVisible();
-      await expect(page.locator('.word')).toHaveCount(2);
-    });
-  });
-});
+      await expect(page.locator('#transcript-container')).toBeVisible()
+      await expect(page.locator('.word')).toHaveCount(2)
+    })
+  })
+})

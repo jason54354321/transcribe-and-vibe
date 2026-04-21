@@ -23,7 +23,7 @@ const emit = defineEmits<{
   'update:useBackend': [value: boolean]
   'update:useVad': [value: boolean]
   'update:isHighlightEnabled': [value: boolean]
-  'toggleTheme': []
+  toggleTheme: []
 }>()
 </script>
 

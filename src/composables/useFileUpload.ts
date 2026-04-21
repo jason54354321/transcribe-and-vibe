@@ -1,30 +1,40 @@
 import { createLogger } from '../utils/logger'
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024
-export const VALID_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/ogg', 'audio/mp4', 'audio/x-wav', 'audio/aac']
+export const VALID_TYPES = [
+  'audio/mpeg',
+  'audio/wav',
+  'audio/x-m4a',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/x-wav',
+  'audio/aac',
+]
+
+export type PreparedAudioSource = {
+  audioUrl: string
+  audioData: Float32Array
+  audioBlob: Blob
+  durationSec: number
+}
 
 export function useFileUpload() {
   const log = createLogger('FileUpload')
 
-  const handleFile = async (file: File): Promise<{
-    audioUrl: string
-    audioData: Float32Array
-    audioBlob: Blob
-    durationSec: number
-  }> => {
+  const handleFile = async (file: File): Promise<PreparedAudioSource> => {
     if (!VALID_TYPES.includes(file.type) && !file.type.startsWith('audio/')) {
       throw new Error(`Invalid file type: ${file.type}. Please upload audio.`)
     }
-    
+
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error("File too large. Maximum size is 100MB.")
+      throw new Error('File too large. Maximum size is 100MB.')
     }
 
     log.info(`Processing "${file.name}" (${file.type}, ${(file.size / 1024 / 1024).toFixed(1)}MB)`)
 
     const audioUrl = URL.createObjectURL(file)
     const arrayBuffer = await file.arrayBuffer()
-    
+
     const audioContext = new AudioContext({ sampleRate: 16000 })
     try {
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
@@ -39,6 +49,6 @@ export function useFileUpload() {
   return {
     handleFile,
     MAX_FILE_SIZE,
-    VALID_TYPES
+    VALID_TYPES,
   }
 }

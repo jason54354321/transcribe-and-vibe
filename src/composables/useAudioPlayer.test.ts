@@ -65,14 +65,14 @@ describe('useAudioPlayer methods', () => {
     })
 
     it('rewinds currentTime by negative delta', () => {
-      const target = el.currentTime + (-5)
+      const target = el.currentTime + -5
       el.currentTime = Math.max(0, Math.min(target, el.duration || 0))
       expect(el.currentTime).toBe(5)
     })
 
     it('clamps to 0 when rewinding past start', () => {
       el.currentTime = 2
-      const target = el.currentTime + (-5)
+      const target = el.currentTime + -5
       el.currentTime = Math.max(0, Math.min(target, el.duration || 0))
       expect(el.currentTime).toBe(0)
     })
@@ -100,7 +100,7 @@ describe('useAudioPlayer methods', () => {
     })
 
     it('decreases volume by delta', () => {
-      const target = Math.round((el.volume + (-0.1)) * 100) / 100
+      const target = Math.round((el.volume + -0.1) * 100) / 100
       el.volume = Math.max(0, Math.min(target, 1))
       expect(el.volume).toBeCloseTo(0.4)
     })
@@ -114,7 +114,7 @@ describe('useAudioPlayer methods', () => {
 
     it('clamps to 0.0 at minimum', () => {
       el.volume = 0.05
-      const target = Math.round((el.volume + (-0.1)) * 100) / 100
+      const target = Math.round((el.volume + -0.1) * 100) / 100
       el.volume = Math.max(0, Math.min(target, 1))
       expect(el.volume).toBe(0)
     })

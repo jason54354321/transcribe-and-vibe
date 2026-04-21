@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, ref, nextTick } from 'vue'
+import { computed, watch, ref } from 'vue'
 
 type Chunk = { text: string; timestamp: [number | null, number | null] }
 
@@ -31,10 +31,10 @@ const paragraphs = computed(() => {
   props.chunks.forEach((chunk, index) => {
     const startSec = chunk.timestamp[0]
     const endSec = chunk.timestamp[1]
-    
+
     if (startSec === null || endSec === null) return
 
-    if (index > 0 && (startSec - lastEndTime > 0.8)) {
+    if (index > 0 && startSec - lastEndTime > 0.8) {
       if (currentParagraph.length > 0) {
         paras.push(currentParagraph)
       }
@@ -46,7 +46,7 @@ const paragraphs = computed(() => {
       start: Math.round(startSec * 1000),
       end: Math.round(endSec * 1000),
       startSec,
-      endSec
+      endSec,
     })
 
     lastEndTime = endSec
@@ -63,10 +63,13 @@ const flatWords = computed(() => paragraphs.value.flat())
 
 const metaInfoText = computed(() => {
   const wordCount = flatWords.value.length
-  const durationSec = props.chunks.length > 0 && props.chunks[props.chunks.length - 1].timestamp[1] !== null 
-    ? props.chunks[props.chunks.length - 1].timestamp[1] 
-    : 0
-  const durationStr = durationSec ? `${Math.floor(durationSec / 60)}m ${Math.floor(durationSec % 60)}s` : ''
+  const durationSec =
+    props.chunks.length > 0 && props.chunks[props.chunks.length - 1].timestamp[1] !== null
+      ? props.chunks[props.chunks.length - 1].timestamp[1]
+      : 0
+  const durationStr = durationSec
+    ? `${Math.floor(durationSec / 60)}m ${Math.floor(durationSec % 60)}s`
+    : ''
   return `${wordCount} words${durationStr ? ' · ' + durationStr : ''}`
 })
 
@@ -88,36 +91,39 @@ const paragraphOffsets = computed(() => {
 
 const activeIndex = ref(-1)
 
-watch(() => props.currentTimeMs, (time) => {
-  const words = flatWords.value
-  if (words.length === 0) return
+watch(
+  () => props.currentTimeMs,
+  (time) => {
+    const words = flatWords.value
+    if (words.length === 0) return
 
-  let low = 0
-  let high = words.length - 1
-  let found = -1
+    let low = 0
+    let high = words.length - 1
+    let found = -1
 
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2)
-    const word = words[mid]
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2)
+      const word = words[mid]
 
-    if (time >= word.start && time < word.end) {
-      found = mid
-      break
-    } else if (time < word.start) {
-      high = mid - 1
-    } else {
-      low = mid + 1
+      if (time >= word.start && time < word.end) {
+        found = mid
+        break
+      } else if (time < word.start) {
+        high = mid - 1
+      } else {
+        low = mid + 1
+      }
     }
-  }
 
-  // In a gap between words — keep highlighting the previous word
-  // But only if there IS a next word (i.e., we're between two words, not past all content)
-  if (found === -1 && high >= 0 && high < words.length - 1 && time >= words[high].end) {
-    found = high
-  }
+    // In a gap between words — keep highlighting the previous word
+    // But only if there IS a next word (i.e., we're between two words, not past all content)
+    if (found === -1 && high >= 0 && high < words.length - 1 && time >= words[high].end) {
+      found = high
+    }
 
-  activeIndex.value = found
-})
+    activeIndex.value = found
+  },
+)
 
 const handleContentClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement
@@ -133,20 +139,21 @@ const handleContentClick = (e: MouseEvent) => {
     <div id="meta-info" class="meta-info">{{ metaInfoText }}</div>
     <div id="transcript-content" class="transcript-content" @click="handleContentClick">
       <p v-for="(para, pIndex) in paragraphs" :key="pIndex">
-        <span 
-          v-if="para.length > 0" 
-          class="paragraph-timestamp" 
-          :data-start="para[0].start"
-        >{{ formatTime(para[0].startSec) }}</span>
-        <span 
-          v-for="(word, wIndex) in para" 
+        <span v-if="para.length > 0" class="paragraph-timestamp" :data-start="para[0].start">{{
+          formatTime(para[0].startSec)
+        }}</span>
+        <span
+          v-for="(word, wIndex) in para"
           :key="`${pIndex}-${wIndex}`"
           class="word"
-          :class="{ active: props.isHighlightEnabled && paragraphOffsets[pIndex] + wIndex === activeIndex }"
+          :class="{
+            active: props.isHighlightEnabled && paragraphOffsets[pIndex] + wIndex === activeIndex,
+          }"
           :data-start="word.start"
           :data-end="word.end"
           :title="`${formatTime(word.startSec)} - ${formatTime(word.endSec)}`"
-        >{{ word.text }}</span>
+          >{{ word.text }}</span
+        >
       </p>
     </div>
   </div>
@@ -196,7 +203,9 @@ const handleContentClick = (e: MouseEvent) => {
   cursor: pointer;
   padding: 2px 0;
   border-radius: 3px;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .word:hover {
