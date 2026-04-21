@@ -18,7 +18,7 @@ export default defineConfig({
   projects: [
     {
       name: 'fast',
-      testMatch: 'fast.spec.ts',
+      testMatch: 'fast/**/*.spec.ts',
       timeout: 30_000,
     },
     {
