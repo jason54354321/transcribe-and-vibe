@@ -6,12 +6,10 @@
  */
 
 export type BenchmarkModel = {
-  /** HuggingFace model ID */
+  /** Backend model ID */
   id: string
   /** Human-readable label */
   label: string
-  /** Quantization dtype */
-  dtype: string
 }
 
 export type BenchmarkSample = {
@@ -39,14 +37,12 @@ export type BenchmarkRunResult = {
 /** Models to benchmark — add entries to extend */
 export const DEFAULT_MODELS: BenchmarkModel[] = [
   {
-    id: 'onnx-community/whisper-base_timestamped',
+    id: 'base',
     label: 'Base',
-    dtype: 'q8',
   },
   {
-    id: 'onnx-community/whisper-small_timestamped',
+    id: 'small',
     label: 'Small',
-    dtype: 'q8',
   },
 ]
 

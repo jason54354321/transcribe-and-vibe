@@ -1,63 +1,33 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { MODELS } from '../models'
+import { computed } from 'vue'
 
 type ModelOption = {
   id: string
   label: string
-}
-
-type DtypeOption = {
-  key: string
-  label: string
-  size?: number
+  description?: string
+  vram_mb?: number
 }
 
 const props = defineProps<{
   modelId: string
-  dtype: string
   disabled?: boolean
-  models?: ModelOption[]
-  dtypes?: DtypeOption[]
-  showDtype?: boolean
+  models: ModelOption[]
 }>()
 
 const emit = defineEmits<{
   'update:modelId': [value: string]
-  'update:dtype': [value: string]
 }>()
 
-const modelEntries = computed(
-  () => props.models ?? Object.entries(MODELS).map(([id, cfg]) => ({ id, label: cfg.label })),
-)
+const modelEntries = computed(() => props.models || [])
 
-const currentDtypes = computed(() => {
-  if (props.dtypes) return props.dtypes
-  const cfg = MODELS[props.modelId]
-  if (!cfg) return []
-  return Object.entries(cfg.dtypes).map(([key, info]) => ({
-    key,
-    label: info.label,
-    size: info.size,
-  }))
-})
+const formatVram = (vramMb?: number) => {
+  if (!vramMb || vramMb <= 0) return ''
+  if (vramMb < 1024) return `(~${vramMb}MB)`
 
-function formatSize(mb: number): string {
-  if (mb >= 1000) return `${(mb / 1000).toFixed(1)} GB`
-  return `${mb} MB`
+  const vramGb = vramMb / 1024
+  const rounded = Number.isInteger(vramGb) ? String(vramGb) : vramGb.toFixed(1)
+  return `(~${rounded}GB)`
 }
-
-// When model changes, reset dtype to q8 (always available) if current dtype isn't valid
-watch(
-  () => props.modelId,
-  (newModelId) => {
-    if (props.dtypes || props.showDtype === false) return
-    const cfg = MODELS[newModelId]
-    if (cfg && !(props.dtype in cfg.dtypes)) {
-      emit('update:dtype', 'q8')
-    }
-  },
-)
 </script>
 
 <template>
@@ -71,20 +41,7 @@ watch(
         @change="emit('update:modelId', ($event.target as HTMLSelectElement).value)"
       >
         <option v-for="m in modelEntries" :key="m.id" :value="m.id">
-          {{ m.label }}
-        </option>
-      </select>
-    </div>
-    <div v-if="showDtype !== false" class="selector-group">
-      <label for="dtype-select">Precision</label>
-      <select
-        id="dtype-select"
-        :value="dtype"
-        :disabled="disabled"
-        @change="emit('update:dtype', ($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="d in currentDtypes" :key="d.key" :value="d.key">
-          {{ d.size != null ? `${d.label} (${formatSize(d.size)})` : d.label }}
+          {{ m.label }} {{ formatVram(m.vram_mb) }}
         </option>
       </select>
     </div>

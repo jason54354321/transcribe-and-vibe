@@ -2,16 +2,19 @@
 // Run:    npx playwright test --project=backend
 
 import { test, expect } from '@playwright/test'
-import path from 'path'
+
+declare const process: {
+  env: Record<string, string | undefined>
+}
 
 const BACKEND_URL = `http://127.0.0.1:${process.env.BACKEND_PORT || '8000'}`
-const FIXTURE = path.join(__dirname, 'fixtures', 'test_vibe.m4a')
+const FIXTURE = 'tests/fixtures/test_vibe.m4a'
 
 test.beforeAll(async () => {
   try {
     const res = await fetch(`${BACKEND_URL}/api/info`)
     if (!res.ok) throw new Error(`Backend returned ${res.status}`)
-  } catch {
+  } catch (err: unknown) {
     test.skip(true, 'Backend not running — start with: cd backend && .venv/bin/uvicorn main:app')
   }
 })
@@ -19,24 +22,19 @@ test.beforeAll(async () => {
 async function gotoAndUpload(page: import('@playwright/test').Page) {
   await page.goto('/')
   await page.waitForTimeout(2000)
-  await expect(page.locator('#backend-toggle')).toBeChecked()
+  await expect(page.locator('#model-select')).toBeVisible()
   await page.locator('#file-input').setInputFiles(FIXTURE)
 }
 
-test.describe('Backend GPU Transcription', () => {
+test.describe('Backend transcription', () => {
   test.describe.configure({ mode: 'serial' })
 
-  test('backend auto-detected and toggle enabled', async ({ page }) => {
+  test('backend metadata is detected and backend model selector is visible', async ({ page }) => {
     await page.goto('/')
     await page.waitForTimeout(2000)
 
-    const toggle = page.locator('#backend-toggle')
-    await expect(toggle).toBeVisible()
-    await expect(toggle).toBeChecked()
-
-    const toggleLabel = page.locator('label', { has: toggle })
-    await expect(toggleLabel).toContainText(/Apple|NVIDIA|GPU/i)
-    await expect(page.locator('#dtype-select')).toHaveCount(0)
+    await expect(page.locator('#model-select')).toBeVisible()
+    await expect(page.locator('#runtime-info')).toHaveCount(0)
   })
 
   test('upload → backend transcribes → transcript renders', async ({ page }) => {
@@ -56,13 +54,19 @@ test.describe('Backend GPU Transcription', () => {
 
     // Verify SSE progress events appear in StatusBar before transcript is ready
     const statusText = page.locator('#status-text')
-    const modelBadge = page.locator('#model-badge')
+    const runtimeInfo = page.locator('#runtime-info')
     await Promise.all([
       expect(statusText).toContainText(/Transcribing|Loading model/, { timeout: 60_000 }),
-      expect(modelBadge).toBeVisible({ timeout: 60_000 }),
+      expect(runtimeInfo).toBeVisible({ timeout: 60_000 }),
     ])
-    await expect(modelBadge).toContainText(/(large-v3-turbo|large-v3|small|base) · [A-Za-z0-9._-]+/)
-    await expect(modelBadge).not.toContainText('whisper-small_timestamped')
+    await expect(page.locator('#runtime-model')).toContainText(
+      /(large-v3-turbo|large-v3|small|base)/,
+    )
+    await expect(page.locator('#runtime-execution-backend')).toContainText(/(CUDA|MLX|CPU)/)
+    await expect(page.locator('#runtime-execution-backend')).toContainText(
+      /(mlx-whisper|faster-whisper)/,
+    )
+    await expect(runtimeInfo).not.toContainText('whisper-small_timestamped')
 
     const transcriptContainer = page.locator('#transcript-container')
     const errorContainer = page.locator('#error-container')
@@ -119,13 +123,16 @@ test.describe('Backend GPU Transcription', () => {
     expect(Math.abs(currentTimeSec * 1000 - expectedStartMs)).toBeLessThan(1000)
   })
 
-  test('warning banner when backend unreachable', async ({ page }) => {
+  test('blocking error when backend unreachable', async ({ page }) => {
     await page.route('**/api/info', (route) => route.abort())
     await page.goto('/')
     await page.waitForTimeout(2000)
 
-    const warning = page.locator('#backend-warning')
-    await expect(warning).toBeVisible()
-    await expect(warning).toContainText('unreachable')
+    await page.locator('#file-input').setInputFiles(FIXTURE)
+    const error = page.locator('#error-container')
+    await expect(error).toBeVisible()
+    await expect(error).toContainText(
+      'Backend is unreachable. Start the backend service, then try transcription again.',
+    )
   })
 })

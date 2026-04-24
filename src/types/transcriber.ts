@@ -4,13 +4,19 @@ import type { PreparedAudioSource } from '../composables/useFileUpload'
 export type TranscribeResult = {
   text: string
   chunks: Array<{ text: string; timestamp: [number | null, number | null] }>
+  hardware?: string
   model?: string
   dtype?: string
+  engine?: string
+  execution_backend?: string
 }
 
 export type ModelInfo = {
+  hardware?: string
   model: string
-  dtype: string
+  dtype?: string
+  engine?: string
+  executionBackend?: string
 }
 
 export type DownloadProgress = {

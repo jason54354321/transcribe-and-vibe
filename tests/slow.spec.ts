@@ -1,9 +1,10 @@
-// Slow E2E test — uses real Whisper model. First run downloads ~150MB model.
+// Slow E2E test — uses the real backend runtime.
 
 import { test, expect } from '@playwright/test'
-import path from 'path'
 
-test('Vibe Transcription - Slow E2E: full transcription with real worker', async ({ page }) => {
+const FIXTURE = 'tests/fixtures/test_vibe.m4a'
+
+test('Vibe Transcription - Slow E2E: full transcription with real backend', async ({ page }) => {
   // Capture console errors and page errors for debugging
   const consoleErrors: string[] = []
   const pageErrors: string[] = []
@@ -17,12 +18,12 @@ test('Vibe Transcription - Slow E2E: full transcription with real worker', async
     pageErrors.push(err.message)
   })
 
-  // 1. Navigate — NO route interception, real worker.js loads
+  // 1. Navigate — NO route interception, real backend request path
   await page.goto('/')
 
   // 2. Upload test audio via file input
   const fileInput = page.locator('#file-input')
-  await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_vibe.m4a'))
+  await fileInput.setInputFiles(FIXTURE)
 
   // 3. Wait for either transcript OR error (don't blindly wait 5min on failure)
   const transcriptVisible = page.locator('#transcript-container')

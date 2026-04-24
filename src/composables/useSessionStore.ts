@@ -1,6 +1,6 @@
 import { openDB } from 'idb'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { TranscribeResult } from './useTranscriber'
+import type { TranscribeResult } from '../types/transcriber'
 import { createLogger } from '../utils/logger'
 
 const log = createLogger('SessionStore')

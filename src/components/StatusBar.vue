@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import type {
-  ModelInfo,
-  DownloadProgress,
-  TranscriptionProgress,
-} from '../composables/useTranscriber'
+import type { ModelInfo, DownloadProgress, TranscriptionProgress } from '../types/transcriber'
 
 const props = defineProps<{
   status: string
@@ -12,6 +8,18 @@ const props = defineProps<{
   downloadProgress?: Record<string, DownloadProgress>
   transcriptionProgress?: TranscriptionProgress | null
 }>()
+
+const EXECUTION_BACKEND_LABELS: Record<string, string> = {
+  cpu: 'CPU',
+  cuda: 'CUDA',
+  mlx: 'MLX',
+}
+
+const HARDWARE_LABELS: Record<string, string> = {
+  apple_silicon: 'Apple Silicon',
+  cuda: 'CUDA-capable GPU',
+  cpu: 'CPU',
+}
 
 const FILLER_MESSAGES = [
   'Extracting audio features…',
@@ -60,6 +68,8 @@ const subStatus = computed(() => {
   return FILLER_MESSAGES[fillerIndex.value % FILLER_MESSAGES.length]
 })
 
+const showProgressBar = computed(() => props.status !== 'Transcription complete')
+
 watch(isTranscribing, (active) => {
   if (active) {
     fillerIndex.value = 0
@@ -81,10 +91,26 @@ onUnmounted(() => {
   }
 })
 
-const modelLabel = computed(() => {
-  if (!props.modelInfo) return null
-  const name = props.modelInfo.model.split('/').pop() ?? props.modelInfo.model
-  return `${name} · ${props.modelInfo.dtype}`
+const runtimeInfo = computed(() => {
+  if (!props.modelInfo) return []
+
+  const hardware = props.modelInfo.hardware
+    ? (HARDWARE_LABELS[props.modelInfo.hardware] ?? props.modelInfo.hardware)
+    : 'Unknown'
+  const executionBackend = props.modelInfo.executionBackend
+    ? (EXECUTION_BACKEND_LABELS[props.modelInfo.executionBackend] ??
+      props.modelInfo.executionBackend)
+    : 'Unknown'
+  const model = props.modelInfo.model.split('/').pop() ?? props.modelInfo.model
+  const details = [props.modelInfo.engine, props.modelInfo.dtype]
+    .filter((part): part is string => Boolean(part))
+    .join(' · ')
+
+  return [
+    { id: 'architecture', label: 'Architecture', value: hardware },
+    { id: 'model', label: 'Model', value: model },
+    { id: 'execution-backend', label: 'Execution backend', value: executionBackend, details },
+  ]
 })
 
 const downloadFiles = computed(() => {
@@ -108,12 +134,23 @@ function formatSize(dp: DownloadProgress) {
 
 <template>
   <div id="status-container" class="status-container">
-    <div v-if="modelLabel" id="model-badge" class="model-badge">{{ modelLabel }}</div>
+    <div v-if="runtimeInfo.length > 0" id="runtime-info" class="runtime-info">
+      <div
+        v-for="item in runtimeInfo"
+        :key="item.id"
+        class="runtime-item"
+        :id="`runtime-${item.id}`"
+      >
+        <div class="runtime-label">{{ item.label }}</div>
+        <div class="runtime-value">{{ item.value }}</div>
+        <div v-if="item.details" class="runtime-details">{{ item.details }}</div>
+      </div>
+    </div>
 
-    <div v-if="isTranscribing && hasRealProgress" class="determinate-track">
+    <div v-if="showProgressBar && isTranscribing && hasRealProgress" class="determinate-track">
       <div class="determinate-bar" :style="{ width: progressPercent + '%' }"></div>
     </div>
-    <div v-else class="indeterminate-track">
+    <div v-else-if="showProgressBar" class="indeterminate-track">
       <div class="indeterminate-bar"></div>
     </div>
     <div id="status-text" class="status-text">{{ status }}</div>
@@ -145,15 +182,38 @@ function formatSize(dp: DownloadProgress) {
   margin: calc(var(--spacing-unit) * 3) 0;
 }
 
-.model-badge {
-  display: inline-block;
+.runtime-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--spacing-unit) * 0.75);
+  margin-bottom: var(--spacing-unit);
+  text-align: left;
+}
+
+.runtime-item {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: calc(var(--spacing-unit) * 0.75);
+}
+
+.runtime-label {
   font-size: 12px;
   color: var(--secondary-text);
-  background: var(--button-bg);
-  border: 1px solid var(--border-color);
-  padding: 4px 12px;
-  border-radius: 12px;
-  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.runtime-value {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.runtime-details {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--secondary-text);
   font-family: monospace;
 }
 
@@ -274,5 +334,11 @@ function formatSize(dp: DownloadProgress) {
   font-size: 12px;
   color: var(--secondary-text);
   margin-top: 4px;
+}
+
+@media (max-width: 700px) {
+  .runtime-info {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

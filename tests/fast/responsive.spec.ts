@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-import { setupMockWorker, transcribeAndWaitForSession } from '../fixtures'
+import { setupMockBackend, transcribeAndWaitForSession } from '../fixtures'
 
 test.describe('Vibe Transcription - Fast Loop', () => {
   test.describe('sidebar responsive behavior', () => {
     test.beforeEach(async ({ page }) => {
-      await setupMockWorker(page)
+      await setupMockBackend(page)
       await page.goto('/')
     })
 

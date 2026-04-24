@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-import { setupMockWorker, uploadTestAudio } from '../fixtures'
+import { setupMockBackend, uploadTestAudio } from '../fixtures'
 
 test.describe('Vibe Transcription - Fast Loop', () => {
   test.describe('highlight preference', () => {
     test.beforeEach(async ({ page }) => {
-      await setupMockWorker(page)
+      await setupMockBackend(page)
       await page.goto('/')
     })
 
@@ -57,7 +57,7 @@ test.describe('Vibe Transcription - Fast Loop', () => {
 
   test.describe('theme switching', () => {
     test.beforeEach(async ({ page }) => {
-      await setupMockWorker(page)
+      await setupMockBackend(page)
       await page.goto('/')
     })
 

@@ -2,16 +2,16 @@ import { computed, ref, watch } from 'vue'
 import type { ComputedRef, Ref, WritableComputedRef } from 'vue'
 import { deleteSession, listSessions, loadSessionData, saveSession } from './useSessionStore'
 import type { Session } from './useSessionStore'
-import type { TranscribeResult } from './useTranscriber'
+import type { TranscribeResult } from '../types/transcriber'
 import { createLogger } from '../utils/logger'
 import { buildSessionRecord, removeSessionById } from '../utils/sessionOrchestration'
 
 type SessionOrchestrationArgs = {
-  transcriberResult: ComputedRef<TranscribeResult | null>
-  transcriberError: WritableComputedRef<string | null>
+  transcriberResult: Ref<TranscribeResult | null>
+  transcriberError: Ref<string | null>
   displayedResult: Ref<TranscribeResult | null>
-  isProcessing: ComputedRef<boolean>
-  transcriptionTimeSec: ComputedRef<number | null>
+  isProcessing: Ref<boolean>
+  transcriptionTimeSec: Ref<number | null>
   audioUrl: Ref<string>
   revokeAudioUrl: () => void
 }

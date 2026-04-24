@@ -1,11 +1,25 @@
 import { expect, type Page } from '@playwright/test'
-// @ts-ignore Runtime module is available in Playwright.
-import path from 'path'
 
-declare const __dirname: string
+const TEST_AUDIO_PATH = 'tests/fixtures/test_vibe.m4a'
 
-export const MOCK_MODEL_ID = 'onnx-community/whisper-small_timestamped'
-export const MOCK_DTYPE = 'q8'
+export const MOCK_MODEL_ID = 'base'
+export const MOCK_DTYPE = 'int8'
+export const MOCK_ENGINE = 'faster-whisper'
+export const MOCK_EXECUTION_BACKEND = 'cpu'
+
+export const MOCK_BACKEND_INFO = {
+  hardware: 'cpu',
+  device: 'Test CPU',
+  memory_gb: 0,
+  engine: MOCK_ENGINE,
+  execution_backend: MOCK_EXECUTION_BACKEND,
+  acceleration: 'cpu',
+  default_model: MOCK_MODEL_ID,
+  available_models: [
+    { id: 'base', label: 'Base', description: 'Fastest CPU fallback', vram_mb: 200 },
+    { id: 'small', label: 'Small', description: 'Higher accuracy CPU option', vram_mb: 500 },
+  ],
+} as const
 
 export const MOCK_CHUNKS = [
   { text: ' Hello', timestamp: [0.0, 0.42] },
@@ -20,159 +34,197 @@ export const MOCK_CHUNKS = [
 
 export const MOCK_TEXT = ' Hello world this is a test of transcription'
 
-export type MockWorkerOptions = {
+export type MockBackendOptions = {
   delay?: number
   error?: string
-  downloadDelay?: number
   chunks?: Array<{ text: string; timestamp: [number | null, number | null] }>
   text?: string
   totalChunks?: number
-}
-
-export function getMockWorkerScript(options?: MockWorkerOptions) {
-  const delay = options?.delay ?? 0
-  const error = options?.error
-  const downloadDelay = options?.downloadDelay ?? 0
-  const chunks = options?.chunks ?? MOCK_CHUNKS
-  const text = options?.text ?? MOCK_TEXT
-  const segments = options?.totalChunks ?? 0
-
-  return `
-const MOCK_TEXT = ${JSON.stringify(text)};
-const MOCK_CHUNKS = ${JSON.stringify(chunks)};
-const MODEL_ID = ${JSON.stringify(MOCK_MODEL_ID)};
-const DTYPE = ${JSON.stringify(MOCK_DTYPE)};
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-self.addEventListener('message', async (event) => {
-  const { type, model, dtype } = event.data ?? {};
-  if (type !== 'transcribe') return;
-
-  const usedModel = model || MODEL_ID;
-  const usedDtype = dtype || DTYPE;
-  self.postMessage({ type: 'model-info', model: usedModel, dtype: usedDtype });
-  self.postMessage({ type: 'progress', status: 'Loading model…' });
-
-  if (${JSON.stringify(downloadDelay)} > 0) {
-    self.postMessage({ type: 'download-progress', file: 'onnx/encoder_model_quantized.onnx', progress: 50, loaded: 92274688, total: 184549376 });
-    await sleep(${JSON.stringify(downloadDelay)} / 2);
-    self.postMessage({ type: 'download-progress', file: 'onnx/encoder_model_quantized.onnx', progress: 100, loaded: 184549376, total: 184549376 });
-    await sleep(${JSON.stringify(downloadDelay)} / 2);
-  }
-
-  if (${JSON.stringify(segments)} === 0 && ${JSON.stringify(delay)} > 0) {
-    await sleep(${JSON.stringify(delay)});
-  }
-
-  if (${JSON.stringify(Boolean(error))}) {
-    self.postMessage({ type: 'error', message: ${JSON.stringify(error ?? '')} });
-    return;
-  }
-
-  const TOTAL_CHUNKS = ${JSON.stringify(segments)};
-  self.postMessage({ type: 'progress', status: 'Transcribing…' });
-  if (TOTAL_CHUNKS > 0) {
-    self.postMessage({ type: 'transcription-progress', completedChunks: 0, totalChunks: TOTAL_CHUNKS });
-    for (let i = 1; i <= TOTAL_CHUNKS; i++) {
-      await sleep(${JSON.stringify(delay)} / TOTAL_CHUNKS);
-      self.postMessage({ type: 'transcription-progress', completedChunks: i, totalChunks: TOTAL_CHUNKS });
-    }
-  } else if (${JSON.stringify(delay)} > 0) {
-    await sleep(${JSON.stringify(delay)});
-  }
-
-  self.postMessage({
-    type: 'result',
-    data: {
-      text: MOCK_TEXT,
-      chunks: MOCK_CHUNKS,
-    },
-  });
-});
-`
+  backendInfo?: Partial<typeof MOCK_BACKEND_INFO>
 }
 
 const BROWSER_MOCKS_SCRIPT = `
-    class MockAudioContext {
-      constructor(options) {
-        this.sampleRate = (options && options.sampleRate) || 16000;
-      }
-      async decodeAudioData() {
-        return {
-          duration: 0.1,
-          getChannelData() {
-            return new Float32Array(1600);
-          },
-        };
-      }
-      close() {
-        return Promise.resolve();
-      }
+  class MockAudioContext {
+    constructor(options) {
+      this.sampleRate = (options && options.sampleRate) || 16000;
     }
-    window.AudioContext = MockAudioContext;
-    window.webkitAudioContext = MockAudioContext;
-    if (window.HTMLMediaElement) {
-      window.HTMLMediaElement.prototype.play = function() { return Promise.resolve(); };
+
+    async decodeAudioData() {
+      return {
+        duration: 0.1,
+        getChannelData() {
+          return new Float32Array(1600);
+        },
+      };
     }
+
+    close() {
+      return Promise.resolve();
+    }
+  }
+
+  window.AudioContext = MockAudioContext;
+  window.webkitAudioContext = MockAudioContext;
+
+  if (window.HTMLMediaElement) {
+    window.HTMLMediaElement.prototype.play = function() {
+      return Promise.resolve();
+    };
+  }
 `
 
-export async function setupMockWorker(page: Page, options?: MockWorkerOptions) {
-  const script = getMockWorkerScript(options)
+function getMockBackendScript(options?: MockBackendOptions) {
+  const delay = options?.delay ?? 0
+  const error = options?.error ?? null
+  const chunks = options?.chunks ?? MOCK_CHUNKS
+  const text = options?.text ?? MOCK_TEXT
+  const totalChunks = options?.totalChunks ?? 0
+  const backendInfo = {
+    ...MOCK_BACKEND_INFO,
+    ...options?.backendInfo,
+    available_models: options?.backendInfo?.available_models ?? MOCK_BACKEND_INFO.available_models,
+  }
 
-  await page.addInitScript(BROWSER_MOCKS_SCRIPT)
+  return `
+    const BACKEND_INFO = ${JSON.stringify(backendInfo)};
+    const MOCK_TEXT = ${JSON.stringify(text)};
+    const MOCK_CHUNKS = ${JSON.stringify(chunks)};
+    const DEFAULT_MODEL_ID = ${JSON.stringify(MOCK_MODEL_ID)};
+    const DEFAULT_DTYPE = ${JSON.stringify(MOCK_DTYPE)};
+    const DEFAULT_ENGINE = ${JSON.stringify(MOCK_ENGINE)};
+    const DEFAULT_EXECUTION_BACKEND = ${JSON.stringify(MOCK_EXECUTION_BACKEND)};
+    const MOCK_DELAY = ${JSON.stringify(delay)};
+    const MOCK_ERROR = ${JSON.stringify(error)};
+    const TOTAL_CHUNKS = ${JSON.stringify(totalChunks)};
 
-  await page.route('**/*silero*.onnx', (route) => route.abort())
-  await page.route('**/ort-wasm*.wasm', (route) => route.abort())
-  await page.route('**/ort-wasm*.mjs', (route) => route.abort())
-  await page.route('**/api/info', (route) => route.abort())
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
-  await page.route(/\/worker\b/, (route) =>
-    route.fulfill({ contentType: 'application/javascript', body: script }),
-  )
+    function toSseEvent(event, data) {
+      return 'event: ' + event + '\\ndata: ' + JSON.stringify(data) + '\\n\\n';
+    }
+
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async function(input, init) {
+      const urlValue = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+      const url = new URL(urlValue, window.location.origin);
+
+      if (url.pathname.endsWith('/api/info')) {
+        return new Response(JSON.stringify(BACKEND_INFO), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.pathname.endsWith('/api/transcribe')) {
+        const model = url.searchParams.get('model') || BACKEND_INFO.default_model || DEFAULT_MODEL_ID;
+        const encoder = new TextEncoder();
+
+        return new Response(
+          new ReadableStream({
+            async start(controller) {
+              controller.enqueue(encoder.encode(toSseEvent('model-loading', {
+                status: 'Loading model ' + model + '...',
+              })));
+              controller.enqueue(encoder.encode(toSseEvent('model-info', {
+                hardware: BACKEND_INFO.hardware,
+                model,
+                dtype: DEFAULT_DTYPE,
+                engine: BACKEND_INFO.engine || DEFAULT_ENGINE,
+                execution_backend: BACKEND_INFO.execution_backend || DEFAULT_EXECUTION_BACKEND,
+              })));
+
+              if (TOTAL_CHUNKS > 0) {
+                controller.enqueue(encoder.encode(toSseEvent('transcription-progress', {
+                  completed_chunks: 0,
+                  total_chunks: TOTAL_CHUNKS,
+                })));
+
+                for (let i = 1; i <= TOTAL_CHUNKS; i++) {
+                  await sleep(Math.max(Math.floor(MOCK_DELAY / TOTAL_CHUNKS), 1));
+                  controller.enqueue(encoder.encode(toSseEvent('transcribing', {
+                    status: 'Transcribing... ' + Math.round((i / TOTAL_CHUNKS) * 100) + '%',
+                    progress: Math.round((i / TOTAL_CHUNKS) * 100),
+                  })));
+                  controller.enqueue(encoder.encode(toSseEvent('transcription-progress', {
+                    completed_chunks: i,
+                    total_chunks: TOTAL_CHUNKS,
+                  })));
+                }
+              } else if (MOCK_DELAY > 0) {
+                controller.enqueue(encoder.encode(toSseEvent('transcribing', {
+                  status: 'Transcribing...',
+                  progress: 10,
+                })));
+                await sleep(MOCK_DELAY);
+              } else {
+                controller.enqueue(encoder.encode(toSseEvent('transcribing', {
+                  status: 'Transcribing...',
+                  progress: 50,
+                })));
+              }
+
+              if (MOCK_ERROR) {
+                controller.enqueue(encoder.encode(toSseEvent('error', { message: MOCK_ERROR })));
+                controller.close();
+                return;
+              }
+
+              controller.enqueue(encoder.encode(toSseEvent('result', {
+                text: MOCK_TEXT,
+                chunks: MOCK_CHUNKS,
+                hardware: BACKEND_INFO.hardware,
+                model,
+                dtype: DEFAULT_DTYPE,
+                engine: BACKEND_INFO.engine || DEFAULT_ENGINE,
+                execution_backend: BACKEND_INFO.execution_backend || DEFAULT_EXECUTION_BACKEND,
+              })));
+              controller.close();
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'text/event-stream' },
+          },
+        );
+      }
+
+      return originalFetch(input, init);
+    };
+  `
 }
 
-export async function setupBrokenWorker(page: Page) {
+export async function setupMockBackend(page: Page, options?: MockBackendOptions) {
   await page.addInitScript(BROWSER_MOCKS_SCRIPT)
-  await page.route('**/api/info', (route) => route.abort())
+  await page.addInitScript(getMockBackendScript(options))
+}
 
-  await page.route(/\/worker\b/, (route) =>
-    route.fulfill({
-      contentType: 'application/javascript',
-      body: 'throw new Error("CDN failed to load");',
-    }),
-  )
+export async function setupUnavailableBackend(page: Page) {
+  await page.addInitScript(BROWSER_MOCKS_SCRIPT)
+  await page.addInitScript(`
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async function(input, init) {
+      const urlValue = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+      const url = new URL(urlValue, window.location.origin);
+      if (url.pathname.endsWith('/api/info')) {
+        throw new Error('Backend unavailable');
+      }
+      if (url.pathname.endsWith('/api/transcribe')) {
+        return new Response('Backend unavailable', { status: 503 });
+      }
+      return originalFetch(input, init);
+    };
+  `)
 }
 
 export async function uploadTestAudio(page: Page) {
   const fileInput = page.locator('#file-input')
-  await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_vibe.m4a'))
+  await fileInput.setInputFiles(TEST_AUDIO_PATH)
 }
 
 export async function transcribeAndWaitForSession(page: Page) {
   await uploadTestAudio(page)
   await expect(page.locator('#transcript-container')).toBeVisible()
   await expect(page.locator('.session-item')).toHaveCount(1)
-}
-
-export async function setupMockWorkerWithBackendAvailable(page: Page) {
-  await setupMockWorker(page)
-  await page.route('**/api/info', (route) =>
-    route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        hardware: 'apple_silicon',
-        device: 'Apple M4',
-        memory_gb: 16,
-        engine: 'mlx-whisper',
-        default_model: 'large-v3-turbo',
-        available_models: [
-          { id: 'large-v3-turbo', label: 'Large V3 Turbo', description: '', vram_mb: 1500 },
-          { id: 'small', label: 'Small', description: '', vram_mb: 500 },
-        ],
-      }),
-    }),
-  )
 }

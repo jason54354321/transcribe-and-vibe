@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test'
 
-import { MOCK_CHUNKS, setupMockWorker, uploadTestAudio } from '../fixtures'
+import { MOCK_CHUNKS, setupMockBackend, uploadTestAudio } from '../fixtures'
 
 declare const Buffer: {
   from(input: string): Uint8Array
 }
 
 test.describe('Vibe Transcription - Fast Loop', () => {
-  test.describe('default mock worker', () => {
+  test.describe('default mock backend', () => {
     test.beforeEach(async ({ page }) => {
-      await setupMockWorker(page)
+      await setupMockBackend(page)
       await page.goto('/')
     })
 

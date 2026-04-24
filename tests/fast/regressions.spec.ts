@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-import { setupBrokenWorker, setupMockWorker, uploadTestAudio } from '../fixtures'
+import { setupMockBackend, uploadTestAudio } from '../fixtures'
 
 test.describe('Vibe Transcription - Fast Loop', () => {
   test.describe('Oracle bug regression tests', () => {
     test('C1: object URL is revoked on re-upload', async ({ page }) => {
-      await setupMockWorker(page)
+      await setupMockBackend(page)
       await page.goto('/')
 
       await page.evaluate(() => {
@@ -33,17 +33,19 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       expect(revokedUrls).toContain(firstUrl)
     })
 
-    test('C2: worker.onerror shows error and preserves drop zone', async ({ page }) => {
-      await setupBrokenWorker(page)
+    test('C2: backend error shows error and preserves drop zone', async ({ page }) => {
+      await setupMockBackend(page, { error: 'Backend transcription failed' })
       await page.goto('/')
 
+      await uploadTestAudio(page)
+
       await expect(page.locator('#error-container')).toBeVisible({ timeout: 5000 })
-      await expect(page.locator('#error-container')).toContainText('Worker error')
+      await expect(page.locator('#error-container')).toContainText('Backend transcription failed')
       await expect(page.locator('#drop-zone')).toBeVisible()
     })
 
     test('C4: null timestamps in chunks are skipped gracefully', async ({ page }) => {
-      await setupMockWorker(page, {
+      await setupMockBackend(page, {
         chunks: [
           { text: ' Hello', timestamp: [0.0, 0.42] },
           { text: ' world', timestamp: [0.42, null] },

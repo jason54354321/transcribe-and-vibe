@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-import { setupMockWorker, uploadTestAudio } from '../fixtures'
+import { setupMockBackend, uploadTestAudio } from '../fixtures'
 
 test.describe('Vibe Transcription - Fast Loop', () => {
   test.describe('keyboard shortcuts', () => {
     test.beforeEach(async ({ page }) => {
-      await setupMockWorker(page)
+      await setupMockBackend(page)
       await page.goto('/')
       await uploadTestAudio(page)
       await expect(page.locator('#transcript-container')).toBeVisible()

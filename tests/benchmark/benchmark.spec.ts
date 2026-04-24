@@ -6,8 +6,6 @@
  * Add samples: place audio + transcript, edit BENCHMARK_SAMPLES in config.ts
  */
 import { test } from '@playwright/test'
-import * as path from 'node:path'
-import * as fs from 'node:fs'
 import { DEFAULT_MODELS, VAD_OPTIONS } from './config'
 import type { BenchmarkRunResult } from './config'
 import { loadSamples } from './dataset'
@@ -22,11 +20,10 @@ test('ASR benchmark: model × VAD matrix', async ({ page }) => {
 
   for (const model of DEFAULT_MODELS) {
     await page.locator('#model-select').selectOption(model.id)
-    await page.locator('#dtype-select').selectOption(model.dtype)
 
     for (const useVad of VAD_OPTIONS) {
       for (const sample of samples) {
-        console.log(`\n--- ${model.label} (${model.dtype}) | VAD=${useVad} | ${sample.id} ---`)
+        console.log(`\n--- ${model.label} | VAD=${useVad} | ${sample.id} ---`)
 
         const vadCheckbox = page.locator('#vad-toggle')
         const isChecked = await vadCheckbox.isChecked()
@@ -89,7 +86,7 @@ test('ASR benchmark: model × VAD matrix', async ({ page }) => {
 
   console.table(
     results.map((r) => ({
-      Model: `${r.model.label} (${r.model.dtype})`,
+      Model: r.model.label,
       VAD: r.useVad ? 'ON' : 'OFF',
       Sample: r.sample,
       'WER %': (r.wer * 100).toFixed(2),
@@ -99,11 +96,4 @@ test('ASR benchmark: model × VAD matrix', async ({ page }) => {
       'Time (s)': (r.durationMs / 1000).toFixed(1),
     })),
   )
-
-  const resultsDir = path.resolve(__dirname, 'results')
-  fs.mkdirSync(resultsDir, { recursive: true })
-  const ts = new Date().toISOString().replace(/[:.]/g, '-')
-  const outFile = path.join(resultsDir, `benchmark-${ts}.json`)
-  fs.writeFileSync(outFile, JSON.stringify(results, null, 2))
-  console.log(`\nResults saved: ${outFile}`)
 })

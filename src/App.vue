@@ -6,34 +6,22 @@ import AudioPlayer from './components/AudioPlayer.vue'
 import TranscriptView from './components/TranscriptView.vue'
 import SessionList from './components/SessionList.vue'
 import TranscriptionControls from './components/TranscriptionControls.vue'
-import type { TranscribeResult } from './composables/useTranscriber'
+import type { TranscribeResult } from './types/transcriber'
 import { useFileUpload } from './composables/useFileUpload'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
 import { useTheme } from './composables/useTheme'
 import { useStickyAudio } from './composables/useStickyAudio'
 import { useSessionOrchestration } from './composables/useSessionOrchestration'
-import { useTranscriptionMode } from './composables/useTranscriptionMode'
+import { useBackendTranscriber } from './composables/useBackendTranscriber'
 import { createLogger } from './utils/logger'
 import { formatTranscriptionTimeDisplay } from './utils/sessionOrchestration'
+import type { ModelInfo } from './types/transcriber'
 
 const log = createLogger('App')
 
-const transcriptionMode = useTranscriptionMode()
+const backendTranscriber = useBackendTranscriber()
 const {
-  workerTranscriber,
-  backendTranscriber,
-  useBackend,
-  selectedModel,
-  selectedDtype,
-  useVad,
-  backendChecked,
-  backendAvailable,
-  activeTranscriber,
-  visibleModelOptions,
-  showPrecisionSelector,
-  canUseBackend,
-  resolvedBackendModel,
   status,
   result: transcriberResult,
   error: transcriberError,
@@ -44,7 +32,16 @@ const {
   transcriptionProgress,
   resetError,
   checkBackend,
-} = transcriptionMode
+} = backendTranscriber
+
+const selectedModel = ref('base')
+const useVad = ref(true)
+const backendChecked = ref(false)
+const backendAvailable = ref(false)
+
+const visibleModelOptions = computed(
+  () => backendTranscriber.backendInfo.value?.available_models ?? [],
+)
 
 const { handleFile } = useFileUpload()
 const { currentTheme, toggleTheme, initializeTheme } = useTheme()
@@ -102,6 +99,32 @@ useKeyboardShortcuts(
 const showDropZone = computed(() => !isProcessing.value && !displayedResult.value)
 const showTranscript = computed(() => displayedResult.value !== null)
 const displayError = computed(() => transcriberError.value || appError.value)
+const runtimeModelInfo = computed<ModelInfo | null>(() => {
+  const backendRuntime = backendTranscriber.backendInfo.value
+  const activeResult = displayedResult.value
+
+  if (modelInfo.value || activeResult?.model) {
+    return {
+      hardware: modelInfo.value?.hardware ?? activeResult?.hardware ?? backendRuntime?.hardware,
+      model: modelInfo.value?.model ?? activeResult?.model ?? selectedModel.value,
+      dtype: modelInfo.value?.dtype ?? activeResult?.dtype,
+      engine: modelInfo.value?.engine ?? activeResult?.engine ?? backendRuntime?.engine,
+      executionBackend:
+        modelInfo.value?.executionBackend ??
+        activeResult?.execution_backend ??
+        backendRuntime?.execution_backend,
+    }
+  }
+
+  return null
+})
+const statusBarVisible = computed(() => showStatus.value || runtimeModelInfo.value !== null)
+const statusDisplay = computed(() => {
+  if (isProcessing.value) return status.value
+  if (runtimeModelInfo.value) return 'Transcription complete'
+  return status.value
+})
+
 const clearAppError = () => {
   appError.value = null
 }
@@ -123,31 +146,27 @@ const onFileSelected = async (file: File) => {
     appError.value = 'File too large. Maximum size is 100MB.'
     return
   }
+  if (!backendAvailable.value) {
+    appError.value =
+      'Backend is unreachable. Start the backend service, then try transcription again.'
+    return
+  }
 
   const sessionId = crypto.randomUUID()
   startTranscriptionSession(sessionId, file.name)
   isProcessing.value = true
-  activeTranscriber.value.status.value = 'Reading file...'
+  status.value = 'Reading file...'
 
   try {
     revokeAudioUrl()
-    const { audioUrl: url, audioData, audioBlob: blob, durationSec: dur } = await handleFile(file)
+    const { audioUrl: url, audioBlob: blob, durationSec: dur } = await handleFile(file)
     setCurrentAudio(url, blob, dur)
     addTemporarySession(sessionId, file.name, dur)
 
     log.info(
-      `New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value}, backend=${useBackend.value})`,
+      `New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value})`,
     )
-    if (useBackend.value) {
-      backendTranscriber.transcribe(file, resolvedBackendModel.value, useVad.value)
-    } else {
-      workerTranscriber.transcribe(
-        audioData,
-        selectedModel.value,
-        selectedDtype.value,
-        useVad.value,
-      )
-    }
+    await backendTranscriber.transcribe(file, selectedModel.value, useVad.value)
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
@@ -171,8 +190,11 @@ onMounted(async () => {
   }
 
   const detected = await checkBackend()
+  backendChecked.value = true
+  backendAvailable.value = detected
   if (detected) {
-    log.info('Backend detected, using GPU transcription')
+    log.info('Backend detected, using backend transcription')
+    selectedModel.value = backendTranscriber.backendInfo.value?.default_model || 'base'
   }
 })
 </script>
@@ -190,26 +212,19 @@ onMounted(async () => {
       <div class="container">
         <TranscriptionControls
           :model-id="selectedModel"
-          :dtype="selectedDtype"
-          :use-backend="useBackend"
           :use-vad="useVad"
           :is-dark-theme="currentTheme === 'dark'"
           :is-processing="isProcessing"
-          :can-use-backend="canUseBackend"
           :visible-model-options="visibleModelOptions"
-          :show-precision-selector="showPrecisionSelector"
-          :backend-info="backendTranscriber.backendInfo.value"
           :is-highlight-enabled="isHighlightEnabled"
           @update:model-id="selectedModel = $event"
-          @update:dtype="selectedDtype = $event"
-          @update:use-backend="useBackend = $event"
           @update:use-vad="useVad = $event"
           @update:is-highlight-enabled="isHighlightEnabled = $event"
           @toggle-theme="toggleTheme"
         />
 
         <div v-if="backendChecked && !backendAvailable" id="backend-warning" class="warning-banner">
-          GPU backend is unreachable. Falling back to in-browser transcription.
+          Backend is unreachable. Audio transcription requires the backend service to be running.
         </div>
 
         <div v-show="displayError" id="error-container" class="error-container">
@@ -219,9 +234,9 @@ onMounted(async () => {
         <DropZone v-show="showDropZone" @file-selected="onFileSelected" />
 
         <StatusBar
-          v-show="showStatus"
-          :status="status"
-          :model-info="modelInfo"
+          v-show="statusBarVisible"
+          :status="statusDisplay"
+          :model-info="runtimeModelInfo"
           :download-progress="downloadProgress"
           :transcription-progress="transcriptionProgress"
         />
