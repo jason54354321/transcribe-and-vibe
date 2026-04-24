@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "static": "vue-tsc -b && vite build && vite preview",
     "test": "bunx playwright test --project=fast",
+    "test:backend:isolated": "bun run scripts/test-backend-isolated.mjs",
     "test:slow": "bunx playwright test --project=slow",
     "test:all": "bunx playwright test",
     "test:unit": "vitest run",
