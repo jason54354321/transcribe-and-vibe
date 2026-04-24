@@ -20,6 +20,8 @@ class TranscribeResult:
     chunks: list[dict[str, object]]  # [{ text: str, timestamp: [float, float] }]
     model: str
     dtype: str
+    engine: str
+    execution_backend: str
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -27,6 +29,8 @@ class TranscribeResult:
             'chunks': self.chunks,
             'model': self.model,
             'dtype': self.dtype,
+            'engine': self.engine,
+            'execution_backend': self.execution_backend,
         }
 
 
@@ -55,4 +59,8 @@ class TranscriptionEngine(ABC):
 
     @abstractmethod
     def engine_name(self) -> str:
+        ...
+
+    @abstractmethod
+    def execution_backend(self) -> str:
         ...

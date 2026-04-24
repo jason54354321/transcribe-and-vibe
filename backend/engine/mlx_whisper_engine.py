@@ -16,6 +16,9 @@ class MlxWhisperEngine(TranscriptionEngine):
     def engine_name(self) -> str:
         return 'mlx-whisper'
 
+    def execution_backend(self) -> str:
+        return 'mlx'
+
     def is_available(self) -> bool:
         if platform.system() != 'Darwin' or platform.machine() != 'arm64':
             return False
@@ -42,7 +45,12 @@ class MlxWhisperEngine(TranscriptionEngine):
 
         if on_progress:
             on_progress('model-loading', {'status': f'Loading {config.label} (MLX)...'})
-            on_progress('model-info', {'model': model_id, 'dtype': dtype})
+            on_progress('model-info', {
+                'model': model_id,
+                'dtype': dtype,
+                'engine': self.engine_name(),
+                'execution_backend': self.execution_backend(),
+            })
 
         logger.info(f'Transcribing with mlx-whisper: {repo}')
 
@@ -58,6 +66,13 @@ class MlxWhisperEngine(TranscriptionEngine):
         segments_obj = result_data.get('segments', [])
         segments = segments_obj if isinstance(segments_obj, list) else []
         total_segments = len(segments)
+
+        if on_progress and total_segments > 0:
+            on_progress('transcription-progress', {
+                'completed_chunks': 0,
+                'total_chunks': total_segments,
+            })
+
         all_words = []
 
         for i, segment in enumerate(segments):
@@ -69,6 +84,10 @@ class MlxWhisperEngine(TranscriptionEngine):
                 on_progress('transcribing', {
                     'status': f'Transcribing... {pct}%',
                     'progress': pct,
+                })
+                on_progress('transcription-progress', {
+                    'completed_chunks': i + 1,
+                    'total_chunks': total_segments,
                 })
 
             words_obj = segment.get('words', [])
@@ -91,4 +110,11 @@ class MlxWhisperEngine(TranscriptionEngine):
         text_obj = result_data.get('text', '')
         full_text = text_obj.strip() if isinstance(text_obj, str) else ''
 
-        return TranscribeResult(text=full_text, chunks=all_words, model=model_id, dtype=dtype)
+        return TranscribeResult(
+            text=full_text,
+            chunks=all_words,
+            model=model_id,
+            dtype=dtype,
+            engine=self.engine_name(),
+            execution_backend=self.execution_backend(),
+        )

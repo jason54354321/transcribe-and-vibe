@@ -82,6 +82,8 @@ async def info():
         'device': hardware.device_name if hardware else 'unknown',
         'memory_gb': hardware.memory_gb if hardware else 0,
         'engine': engine.engine_name() if engine else 'none',
+        'execution_backend': engine.execution_backend() if engine else 'none',
+        'acceleration': 'cpu' if hardware and hardware.device_type == 'cpu' else 'gpu',
         'default_model': default_model_id,
         'available_models': list_models(),
     }
@@ -97,6 +99,11 @@ def _run_transcription(
     """Run transcription in a thread, pushing SSE events into the queue."""
     try:
         def on_progress(event_type: str, data: dict[str, object]) -> None:
+            if event_type == 'model-info':
+                data = {
+                    **data,
+                    'hardware': hardware.device_type if hardware else 'unknown',
+                }
             q.put(_sse_event(event_type, data))
 
         result = eng.transcribe(
@@ -105,7 +112,10 @@ def _run_transcription(
             use_vad=use_vad,
             on_progress=on_progress,
         )
-        q.put(_sse_event('result', result.to_dict()))
+        q.put(_sse_event('result', {
+            **result.to_dict(),
+            'hardware': hardware.device_type if hardware else 'unknown',
+        }))
     except Exception as e:
         logger.exception('Transcription failed')
         q.put(_sse_event('error', {'message': str(e)}))

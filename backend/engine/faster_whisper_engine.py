@@ -25,6 +25,9 @@ class FasterWhisperEngine(TranscriptionEngine):
     def engine_name(self) -> str:
         return 'faster-whisper'
 
+    def execution_backend(self) -> str:
+        return self._device
+
     def is_available(self) -> bool:
         try:
             import faster_whisper  # noqa: F401
@@ -67,7 +70,12 @@ class FasterWhisperEngine(TranscriptionEngine):
         model = self._get_model(model_id, on_progress)
 
         if on_progress:
-            on_progress('model-info', {'model': model_id, 'dtype': compute})
+            on_progress('model-info', {
+                'model': model_id,
+                'dtype': compute,
+                'engine': self.engine_name(),
+                'execution_backend': self.execution_backend(),
+            })
 
         if on_progress:
             on_progress('transcribing', {'status': 'Transcribing...'})
@@ -79,16 +87,29 @@ class FasterWhisperEngine(TranscriptionEngine):
             beam_size=5,
         )
 
+        segments = list(segments_gen)
+
         logger.info(f'Detected language: {info.language} (prob={info.language_probability:.2f})')
         duration = info.duration if info.duration > 0 else 1
+        total_segments = len(segments)
+
+        if on_progress and total_segments > 0:
+            on_progress('transcription-progress', {
+                'completed_chunks': 0,
+                'total_chunks': total_segments,
+            })
 
         all_words = []
-        for segment in segments_gen:
+        for i, segment in enumerate(segments):
             if on_progress:
                 pct = min(int((segment.end / duration) * 100), 99)
                 on_progress('transcribing', {
                     'status': f'Transcribing... {pct}%',
                     'progress': pct,
+                })
+                on_progress('transcription-progress', {
+                    'completed_chunks': i + 1,
+                    'total_chunks': total_segments,
                 })
 
             if segment.words:
@@ -100,4 +121,11 @@ class FasterWhisperEngine(TranscriptionEngine):
 
         full_text = ''.join(w['text'] for w in all_words)
 
-        return TranscribeResult(text=full_text, chunks=all_words, model=model_id, dtype=compute)
+        return TranscribeResult(
+            text=full_text,
+            chunks=all_words,
+            model=model_id,
+            dtype=compute,
+            engine=self.engine_name(),
+            execution_backend=self.execution_backend(),
+        )
