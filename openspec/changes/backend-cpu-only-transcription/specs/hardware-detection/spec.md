@@ -1,11 +1,7 @@
-## Purpose
-
-Define the canonical requirements for automatic compute hardware detection at backend startup, including Apple Silicon, NVIDIA GPU, and CPU-only fallback.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Auto-detect compute hardware at startup
-The system SHALL detect available compute hardware when the backend starts. Detection SHALL identify: Apple Silicon (MPS via MLX), NVIDIA GPU (CUDA via torch), or CPU-only. The detected hardware SHALL determine which ASR engine is used, and when no MLX or CUDA acceleration is available the backend SHALL automatically fall back to CPU execution as a supported operating mode.
+The system SHALL detect available compute hardware when the backend starts. Detection SHALL identify Apple Silicon (MPS via MLX), NVIDIA GPU (CUDA via torch), or CPU-only. The detected hardware SHALL determine which ASR engine is used, and when no MLX or CUDA acceleration is available the backend SHALL automatically fall back to CPU execution as a supported operating mode.
 
 #### Scenario: Apple Silicon detected
 - **WHEN** backend starts on a Mac with Apple Silicon

@@ -1,14 +1,15 @@
 # AGENTS.md — Vibe Transcription
 
-Audio transcription app with dual-mode architecture: **GPU-accelerated backend** (default when available) and **in-browser WASM fallback**. Vue 3 + Vite 8 + TypeScript 6 (strict mode). Python FastAPI backend with mlx-whisper (Apple Silicon) or faster-whisper (NVIDIA/CPU).
+Audio transcription app with **backend-only transcription**: the frontend always sends audio to the FastAPI backend, which runs mlx-whisper on Apple Silicon or faster-whisper on NVIDIA/CPU. Vue 3 + Vite 8 + TypeScript 6 (strict mode).
 
 ## Build & Test Commands
 
 ```bash
 bun run dev              # Vite dev server on localhost:5173 (proxies /api → backend:8000)
 bun run build            # vue-tsc type-check + vite build (MUST pass before PR)
-bun run test             # Playwright fast tests (mock worker, ~10s, 26 tests)
-bun run test:slow        # Playwright slow tests (real Whisper model, ~20s, downloads ~150MB on first run)
+bun run test             # Playwright fast tests with mock backend/SSE
+bun run test:backend:isolated # Starts isolated backend/frontend ports, then runs backend Playwright
+bun run test:slow        # Playwright slow tests against the real backend/runtime
 bun run test:all         # All Playwright projects
 bun run test:unit        # Vitest unit tests (src/**/*.test.ts)
 ```
@@ -24,6 +25,9 @@ cd backend && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 
 # Backend integration tests (requires backend running on port 8000)
 bunx playwright test --project=backend
+
+# Isolated backend integration tests (spawns dedicated backend/frontend ports automatically)
+bun run test:backend:isolated
 ```
 
 ### Running a single test
@@ -33,13 +37,13 @@ bunx playwright test --project=backend
 bunx playwright test --project=fast -g "file upload shows transcript"
 
 # Playwright — by file
-bunx playwright test tests/fast.spec.ts --project=fast
+bunx playwright test tests/fast/core.spec.ts --project=fast
 
 # Vitest — by file
-bunx vitest run src/utils/vadPipeline.test.ts
+bunx vitest run src/utils/sessionOrchestration.test.ts
 
 # Vitest — by test name
-bunx vitest run -t "merges two segments"
+bunx vitest run -t "prepends temporary session"
 ```
 
 ### Type checking only
@@ -53,27 +57,22 @@ bunx vue-tsc -b          # Same check as `bun run build` first step
 ```
 src/
   main.ts                     # App entry
-  worker.ts                   # Web Worker — VAD → Whisper ASR (Vite-bundled, in-browser mode only)
-  models.ts                   # Frontend ONNX model configs for in-browser mode (Base/Small/Medium × quantization)
-  transformers-cdn.d.ts       # Ambient module types for CDN-loaded @huggingface/transformers
-  App.vue                     # Root component — dual-mode orchestrator: file upload → transcribe → display → session save/restore
+  App.vue                     # Root component — backend-only orchestrator: upload → backend SSE → display → session save/restore
   components/
     DropZone.vue              # Drag-and-drop file input
     AudioPlayer.vue           # <audio> element wrapper with seek support
-    ModelSelector.vue         # Model & quantization selector (in-browser ONNX models)
     SessionList.vue           # Sidebar with session history, new/delete/select actions
-    StatusBar.vue             # Progress/status display during transcription
+    StatusBar.vue             # Progress/status display + runtime info area
+    TranscriptionControls.vue # Model/VAD/theme/highlight controls
     TranscriptView.vue        # Word-level transcript with click-to-seek and auto-highlight
   composables/
-    useTranscriber.ts         # In-browser mode: creates Web Worker, posts messages, updates reactive refs
-    useBackendTranscriber.ts  # GPU backend mode: fetch + SSE streaming, same reactive interface as useTranscriber
+    useBackendTranscriber.ts  # Backend-only transcription path: fetch + SSE streaming + runtime metadata
     useFileUpload.ts          # File validation + AudioContext decoding to Float32Array + original Blob
     useAudioPlayer.ts         # Audio playback state (currentTimeMs, seekTo)
+    useSessionOrchestration.ts # Session lifecycle orchestration across upload/transcription/restore
     useSessionStore.ts        # IndexedDB CRUD for session persistence (idb library)
   utils/
     logger.ts                 # createLogger(tag) — console wrapper with [HH:MM:SS.mmm][Tag] prefix
-    vadPipeline.ts            # Pure functions: mergeVadSegments, offsetTimestamps, sliceAudio
-    vadPipeline.test.ts       # Vitest unit tests for above
 backend/
   main.py                     # FastAPI app — /api/info, /api/transcribe (SSE), static file serving
   models.py                   # Backend model registry (large-v3-turbo, large-v3, small, base)
@@ -85,48 +84,48 @@ backend/
     mlx_whisper_engine.py     # MLX backend (Apple Silicon)
     faster_whisper_engine.py  # faster-whisper backend (NVIDIA / CPU)
 tests/
-  fixtures.ts                 # Mock worker script, MockAudioContext, test helpers
+  fixtures.ts                 # Mock backend/SSE responses, MockAudioContext, test helpers
   fixtures/test_vibe.m4a      # Real audio fixture for E2E
-  fast.spec.ts                # 26 Playwright tests with mock worker (VAD routes blocked → fallback)
-  slow.spec.ts                # 1 Playwright test with real Whisper model (in-browser)
-  backend.spec.ts             # 4 Playwright tests for GPU backend integration
+  fast/                       # Playwright fast tests using mock backend/SSE
+  slow.spec.ts                # Real backend/runtime smoke test
+  backend.spec.ts             # Playwright tests for backend integration
   benchmark/                  # WER benchmark suite (real model, 900s timeout)
 dev.sh                        # One-shot launcher: vite build → uvicorn serve
 vite.config.ts                # Vite config with /api proxy to backend (BACKEND_PORT env)
-playwright.config.ts          # 4 projects: fast, slow, backend, benchmark
+playwright.config.ts          # Playwright config; supports isolated baseURL/webServer via env vars
+scripts/test-backend-isolated.mjs # Isolated backend/frontend launcher for backend Playwright
 ```
 
 ## Architecture Notes
 
-### Dual-mode transcription
+### Backend-only transcription
 
-The app supports two transcription modes, selected automatically on mount:
+The app has a single transcription path:
 
-1. **GPU backend** (default when available) — `useBackendTranscriber.ts` sends the audio file via `POST /api/transcribe` to a Python FastAPI server. The backend runs Whisper natively (mlx-whisper on Apple Silicon, faster-whisper on NVIDIA/CPU) and streams progress via SSE. Models: large-v3-turbo (default with GPU), large-v3, small, base.
-
-2. **In-browser WASM** (fallback) — `useTranscriber.ts` creates a Vite-bundled Web Worker (`src/worker.ts`) that runs the full pipeline: VAD (Silero via `@ricky0123/vad-web`) → segment merging → Whisper ASR (`@huggingface/transformers@3`, CDN dynamic import). ONNX models: Base/Small/Medium with quantization options (q4/q8/fp16/fp32).
+1. **Backend transcription** — `useBackendTranscriber.ts` sends the audio file via `POST /api/transcribe` to the FastAPI server. The backend selects the best available local compute path automatically: mlx-whisper on Apple Silicon, faster-whisper on NVIDIA CUDA, or faster-whisper CPU fallback when no GPU acceleration is available.
 
 ### Mode selection (App.vue onMounted)
 
-On mount, `backendTranscriber.checkBackend()` fetches `GET /api/info`. If reachable → `useBackend = true` (GPU mode); if unreachable → fallback to in-browser with a warning banner (`#backend-warning`). User can toggle modes via `#backend-toggle` checkbox.
+On mount, `backendTranscriber.checkBackend()` fetches `GET /api/info`. If reachable, the app uses backend transcription and initializes the default backend model. If unreachable, the app records backend-unavailable state and transcription attempts fail with a clear blocking error. There is no browser fallback mode.
 
 ### Backend architecture (backend/)
 
 - **Hardware detection** (`engine/hardware.py`): Priority order — Apple Silicon + MLX → NVIDIA CUDA → CPU fallback.
 - **Engine factory** (`engine/factory.py`): Creates `MlxWhisperEngine` or `FasterWhisperEngine` based on detected hardware.
-- **Transcription API** (`main.py`): `POST /api/transcribe` accepts multipart file upload, runs transcription in a thread, streams SSE events (`model-loading`, `transcribing`, `result`, `error`) via a queue.
+- **Transcription API** (`main.py`): `POST /api/transcribe` accepts multipart file upload, runs transcription in a thread, streams SSE events (`model-loading`, `model-info`, `transcribing`, `transcription-progress`, `result`, `error`) via a queue.
 - **Static serving**: When `dist/` exists, FastAPI serves the built frontend as SPA (catch-all route). This enables single-process deployment via `dev.sh`.
 
 ### Frontend transcriber interface
 
-Both `useTranscriber` and `useBackendTranscriber` expose the same reactive interface: `status`, `result`, `error`, `isProcessing`, `modelInfo`, `downloadProgress`, `transcriptionTimeSec`, `transcriptionProgress`, `transcribe()`, `resetError()`. `App.vue` uses a computed `activeTranscriber` to switch between them seamlessly.
+`useBackendTranscriber` exposes the frontend transcription state: `status`, `result`, `error`, `isProcessing`, `modelInfo`, `downloadProgress`, `transcriptionTimeSec`, `transcriptionProgress`, `transcribe()`, and `resetError()`. `App.vue` also merges runtime metadata from live SSE, `/api/info`, and restored session results so the runtime info area remains visible after completion.
 
-### Worker pipeline (in-browser mode)
+### SSE progress flow
 
-- `src/worker.ts` is Vite-bundled and runs VAD (Silero via `@ricky0123/vad-web`, package-managed dependency) → segment merging → Whisper ASR (`@huggingface/transformers@3`, CDN dynamic import via `/* @vite-ignore */`). Keeps ~50–100 MB of ONNX/WASM runtime off the main thread.
-- **VAD fallback**: If VAD fails to load (ONNX model unavailable), the worker falls back to treating the entire audio as one segment.
-- **Worker instantiation**: `new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' })` — Vite resolves and bundles the worker at build time.
-- **CDN types**: `src/transformers-cdn.d.ts` provides ambient module declarations for the CDN URL, enabling full type safety on the dynamic import.
+- `model-loading` carries user-visible loading status.
+- `model-info` carries runtime metadata for the active job: architecture, model, dtype, engine, and execution backend.
+- `transcribing` carries percentage-oriented status updates.
+- `transcription-progress` carries chunk-level progress (`completed_chunks`, `total_chunks`) for determinate progress UI.
+- `result` returns the transcript payload and session metadata used for restore/runtime info.
 
 ### Session persistence
 
@@ -161,9 +160,9 @@ ESLint and Prettier are configured. Follow these conventions observed in the cod
 Order: vue → external packages → local modules (relative paths)
 ```ts
 import { ref, computed } from 'vue'
-import { NonRealTimeVAD } from '@ricky0123/vad-web'
-import { mergeVadSegments } from '../utils/vadPipeline'
-import type { VadSegment } from '../utils/vadPipeline'
+import { openDB } from 'idb'
+import { createLogger } from '../utils/logger'
+import type { SessionRecord } from '../types/session'
 ```
 
 ### Naming
@@ -179,7 +178,7 @@ import type { VadSegment } from '../utils/vadPipeline'
 - Use `calc(var(--spacing-unit) * N)` for spacing
 
 ### HTML / Accessibility
-- Key elements have explicit `id` attributes for test selectors (e.g., `#drop-zone`, `#status-container`, `#transcript-container`, `#error-container`, `#session-sidebar`, `#backend-toggle`, `#vad-toggle`, `#backend-warning`)
+- Key elements have explicit `id` attributes for test selectors (e.g., `#drop-zone`, `#status-container`, `#transcript-container`, `#error-container`, `#session-sidebar`, `#vad-toggle`, `#runtime-info`)
 - Preserve these IDs — Playwright tests depend on them
 
 ### File Deletion
@@ -189,24 +188,23 @@ import type { VadSegment } from '../utils/vadPipeline'
 ### Error Handling
 - User-facing errors go to reactive `error` ref, displayed in `#error-container`
 - Never swallow errors silently; either surface to user or log
-- Worker errors propagate via `{ type: 'error', message: string }` protocol
 - Backend errors propagate via SSE `error` event with `{ message: string }`
 - Use `finally` blocks for cleanup (close AudioContext, reset `isProcessing`)
 
 ## Testing Conventions
 
 ### Fast tests (Playwright)
-- Mock the worker via `setupMockWorker(page, options?)` from `tests/fixtures.ts`
+- Mock the backend via `setupMockBackend(page, options?)` from `tests/fixtures.ts`
 - Mock AudioContext is injected via `page.addInitScript`
-- VAD ONNX routes (`**/*silero*.onnx`, `**/ort-wasm*`) are blocked → VAD falls back
+- Fast tests assert backend-only flow, runtime info, SSE progress, and backend-unavailable behavior
 - Always wait for `#transcript-container` to be visible before asserting on transcript content
 - Use `page.locator()` with CSS selectors; prefer `#id` for containers, `.class` for repeated elements
 
 ### Backend tests (Playwright)
 - Require a running backend (`cd backend && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000`)
-- Verify auto-detection (`#backend-toggle` checked), SSE progress, transcript rendering, click-to-seek
-- Test fallback warning banner when backend is unreachable (route abort)
-- 120s timeout; run via `bunx playwright test --project=backend`
+- Verify model detection, SSE progress, transcript rendering, click-to-seek, and backend-unavailable blocking flow
+- Test backend-unreachable behavior through route aborts and transcription-time failures
+- 120s timeout; run via `bunx playwright test --project=backend` or `bun run test:backend:isolated`
 
 ### Unit tests (Vitest)
 - Co-located with source: `src/utils/foo.test.ts` tests `src/utils/foo.ts`
@@ -214,7 +212,7 @@ import type { VadSegment } from '../utils/vadPipeline'
 - Import from vitest: `import { describe, it, expect } from 'vitest'`
 
 ### Slow tests (Playwright)
-- No mocking — real Vite-bundled worker, real Whisper model download
+- No mocking — real backend/runtime transcription path
 - 300s timeout; captures console errors and page errors
 - Only run explicitly via `bun run test:slow`
 
@@ -222,28 +220,11 @@ import type { VadSegment } from '../utils/vadPipeline'
 - WER (Word Error Rate) evaluation against reference transcripts
 - 900s timeout; run via `bunx playwright test --project=benchmark`
 
-## Worker Protocol (src/worker.ts) — In-browser mode only
-
-Messages from main thread to worker:
-```
-{ type: 'transcribe', audio: Float32Array, model?: string, dtype?: string, useVad?: boolean }
-```
-
-Messages from worker to main thread:
-```
-{ type: 'progress', status: string }
-{ type: 'model-info', model: string, dtype: string }
-{ type: 'download-progress', file: string, progress: number, loaded: number, total: number }
-{ type: 'transcription-progress', completedChunks: number, totalChunks: number }
-{ type: 'result', data: { text: string, chunks: Array<{ text: string, timestamp: [number, number] }> } }
-{ type: 'error', message: string }
-```
-
-## Backend API Protocol (backend/main.py) — GPU mode
+## Backend API Protocol (backend/main.py)
 
 ### `GET /api/info`
 ```json
-{ "hardware": "apple_silicon", "device": "Apple M1 Pro", "memory_gb": 16.0, "engine": "mlx-whisper", "default_model": "large-v3-turbo", "available_models": [...] }
+{ "hardware": "apple_silicon", "device": "Apple M1 Pro", "memory_gb": 16.0, "engine": "mlx-whisper", "execution_backend": "mlx", "default_model": "large-v3-turbo", "available_models": [...] }
 ```
 
 ### `POST /api/transcribe?model=large-v3-turbo&vad=true`
@@ -252,11 +233,17 @@ Multipart file upload. Returns SSE stream:
 event: model-loading
 data: { "status": "Loading model large-v3-turbo..." }
 
+event: model-info
+data: { "hardware": "apple_silicon", "model": "large-v3-turbo", "dtype": "float16", "engine": "mlx-whisper", "execution_backend": "mlx" }
+
 event: transcribing
 data: { "status": "Transcribing...", "progress": 45 }
 
+event: transcription-progress
+data: { "completed_chunks": 12, "total_chunks": 40 }
+
 event: result
-data: { "text": "...", "chunks": [{ "text": "word", "timestamp": [0.0, 0.5] }, ...] }
+data: { "text": "...", "chunks": [{ "text": "word", "timestamp": [0.0, 0.5] }, ...], "hardware": "apple_silicon", "model": "large-v3-turbo", "dtype": "float16", "engine": "mlx-whisper", "execution_backend": "mlx" }
 
 event: error
 data: { "message": "error description" }

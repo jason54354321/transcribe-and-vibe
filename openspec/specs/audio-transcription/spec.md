@@ -20,26 +20,15 @@ The system SHALL accept audio files via drag-and-drop or file picker in the brow
 - **THEN** system displays an error message: "File exceeds 100MB limit"
 
 ### Requirement: Word-level transcription via backend
-The system SHALL transcribe audio using the local Python backend with GPU-accelerated ASR (faster-whisper or mlx-whisper). The backend SHALL use VAD preprocessing (Silero) to segment audio before transcription. The backend SHALL return word-level timestamps. The result format SHALL match the existing `{ text, chunks: [{ text, timestamp }] }` shape.
+The system SHALL transcribe audio using the local Python backend as the only supported transcription path. The backend SHALL run on the best available local compute hardware: Apple Silicon via mlx-whisper, NVIDIA via faster-whisper with CUDA, or CPU-only via faster-whisper on `device="cpu"`. The backend SHALL return word-level timestamps. The result format SHALL match the existing `{ text, chunks: [{ text, timestamp }] }` shape.
 
-#### Scenario: Transcription produces word-level timestamps
-- **WHEN** a valid English audio file is transcribed via the backend
-- **THEN** the backend returns a result containing `{ text: "...", chunks: [{ text: "Hello", timestamp: [0.00, 0.42] }, ...] }` where every chunk has `timestamp[0] < timestamp[1]` and chunks are in chronological order
+#### Scenario: Transcription produces word-level timestamps on CPU-only backend
+- **WHEN** a valid English audio file is transcribed on a machine with no GPU acceleration available
+- **THEN** the backend transcribes the file with its CPU execution path and returns `{ text: "...", chunks: [{ text: "Hello", timestamp: [0.00, 0.42] }, ...] }` where every chunk has `timestamp[0] < timestamp[1]` and chunks are in chronological order
 
-#### Scenario: UI remains responsive during transcription
+#### Scenario: UI remains responsive during backend transcription
 - **WHEN** a 10-minute audio file is being transcribed by the backend
-- **THEN** the frontend UI remains fully interactive since transcription runs server-side
-
-### Requirement: Whisper model auto-download and caching
-The system SHALL download Whisper models from HuggingFace Hub on first use via the backend's ASR engine. Models SHALL be cached in `~/.cache/huggingface/` for subsequent uses. The system SHALL report download progress to the frontend via SSE.
-
-#### Scenario: First use with no cached model
-- **WHEN** backend receives first transcription request and model is not cached
-- **THEN** model is downloaded with progress streamed to the frontend, then transcription begins
-
-#### Scenario: Subsequent use with cached model
-- **WHEN** backend receives a transcription request and model is already cached
-- **THEN** no download occurs, model loads from cache, and transcription begins immediately
+- **THEN** the frontend UI remains fully interactive since transcription runs server-side regardless of whether the backend is using GPU or CPU hardware
 
 ### Requirement: Transcription progress reporting
 The backend SHALL report progress to the frontend via SSE events during transcription. Progress events SHALL include: model loading status, transcription percentage, and chunk-level progress. The frontend SHALL display this progress identically to the previous Worker-based flow.
