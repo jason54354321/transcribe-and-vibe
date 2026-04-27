@@ -12,6 +12,8 @@ Local audio transcription powered by [Whisper](https://github.com/openai/whisper
 - **Session persistence** — IndexedDB saves transcription history across sessions
 - **Runtime info UI** — architecture, active model, and execution backend stay visible during and after transcription
 
+<img width="2285" height="1359" alt="image" src="https://github.com/user-attachments/assets/6ba426c4-11ac-404e-b6f4-6e67a100a863" />
+
 ## Prerequisites
 
 - **[Bun](https://bun.sh/)** ≥ 1.x
