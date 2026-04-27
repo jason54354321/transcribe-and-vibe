@@ -63,7 +63,7 @@ src/
     AudioPlayer.vue           # <audio> element wrapper with seek support
     SessionList.vue           # Sidebar with session history, new/delete/select actions
     StatusBar.vue             # Progress/status display + runtime info area
-    TranscriptionControls.vue # Model/VAD/theme/highlight controls
+    TranscriptionControls.vue # Model/theme/highlight controls
     TranscriptView.vue        # Word-level transcript with click-to-seek and auto-highlight
   composables/
     useBackendTranscriber.ts  # Backend-only transcription path: fetch + SSE streaming + runtime metadata
@@ -178,7 +178,7 @@ import type { SessionRecord } from '../types/session'
 - Use `calc(var(--spacing-unit) * N)` for spacing
 
 ### HTML / Accessibility
-- Key elements have explicit `id` attributes for test selectors (e.g., `#drop-zone`, `#status-container`, `#transcript-container`, `#error-container`, `#session-sidebar`, `#vad-toggle`, `#runtime-info`)
+- Key elements have explicit `id` attributes for test selectors (e.g., `#drop-zone`, `#status-container`, `#transcript-container`, `#error-container`, `#session-sidebar`, `#runtime-info`)
 - Preserve these IDs — Playwright tests depend on them
 
 ### File Deletion
@@ -227,7 +227,7 @@ import type { SessionRecord } from '../types/session'
 { "hardware": "apple_silicon", "device": "Apple M1 Pro", "memory_gb": 16.0, "engine": "mlx-whisper", "execution_backend": "mlx", "default_model": "large-v3-turbo", "available_models": [...] }
 ```
 
-### `POST /api/transcribe?model=large-v3-turbo&vad=true`
+### `POST /api/transcribe?model=large-v3-turbo`
 Multipart file upload. Returns SSE stream:
 ```
 event: model-loading

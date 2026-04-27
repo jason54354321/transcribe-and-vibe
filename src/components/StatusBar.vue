@@ -96,15 +96,16 @@ const runtimeInfo = computed(() => {
 
   const hardware = props.modelInfo.hardware
     ? (HARDWARE_LABELS[props.modelInfo.hardware] ?? props.modelInfo.hardware)
-    : 'Unknown'
+    : 'N/A'
   const executionBackend = props.modelInfo.executionBackend
     ? (EXECUTION_BACKEND_LABELS[props.modelInfo.executionBackend] ??
       props.modelInfo.executionBackend)
-    : 'Unknown'
-  const model = props.modelInfo.model.split('/').pop() ?? props.modelInfo.model
-  const details = [props.modelInfo.engine, props.modelInfo.dtype]
-    .filter((part): part is string => Boolean(part))
-    .join(' · ')
+    : 'N/A'
+  const model =
+    props.modelInfo.model === 'N/A'
+      ? 'N/A'
+      : (props.modelInfo.model.split('/').pop() ?? props.modelInfo.model)
+  const details = [props.modelInfo.engine ?? 'N/A', props.modelInfo.dtype ?? 'N/A'].join(' · ')
 
   return [
     { id: 'architecture', label: 'Architecture', value: hardware },

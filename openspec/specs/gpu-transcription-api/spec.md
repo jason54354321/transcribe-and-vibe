@@ -1,6 +1,6 @@
 ## Purpose
 
-Define the canonical requirements for the GPU-accelerated transcription REST API, including audio upload, SSE progress streaming, result format, and model/VAD selection.
+Define the canonical requirements for the GPU-accelerated transcription REST API, including audio upload, SSE progress streaming, result format, and model selection.
 
 ## Requirements
 
@@ -48,12 +48,12 @@ The backend SHALL expose runtime metadata for each transcription session that id
 - **WHEN** a transcription runs because the backend fell back to CPU execution
 - **THEN** backend metadata identifies the detected architecture, the active model, and `CPU` as the execution backend for that session
 
-### Requirement: Model and VAD selection via query parameters
-The system SHALL accept optional query parameters `model` (model ID from registry) and `vad` (boolean, default true). If `model` is omitted, the system SHALL use the default model configured for the detected hardware, including CPU-safe defaults on CPU-only machines. If `vad=false`, the system SHALL skip VAD preprocessing.
+### Requirement: Model selection via query parameters
+The system SHALL accept an optional `model` query parameter (model ID from registry). If `model` is omitted, the system SHALL use the default model configured for the detected hardware, including CPU-safe defaults on CPU-only machines. VAD, when supported by the active backend engine, SHALL be applied automatically and SHALL NOT be user-configurable through the API.
 
 #### Scenario: Explicit model selection
-- **WHEN** client sends `POST /api/transcribe?model=large-v3-turbo&vad=false`
-- **THEN** server uses the specified model without VAD preprocessing when that model is valid for the running backend
+- **WHEN** client sends `POST /api/transcribe?model=large-v3-turbo`
+- **THEN** server uses the specified model when that model is valid for the running backend, while keeping engine-supported VAD behavior enabled automatically
 
 #### Scenario: Default model selection on CPU-only backend
 - **WHEN** client sends `POST /api/transcribe` without model parameter to a CPU-only backend

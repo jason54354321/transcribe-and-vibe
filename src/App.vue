@@ -35,7 +35,6 @@ const {
 } = backendTranscriber
 
 const selectedModel = ref('base')
-const useVad = ref(true)
 const backendChecked = ref(false)
 const backendAvailable = ref(false)
 
@@ -99,21 +98,22 @@ useKeyboardShortcuts(
 const showDropZone = computed(() => !isProcessing.value && !displayedResult.value)
 const showTranscript = computed(() => displayedResult.value !== null)
 const displayError = computed(() => transcriberError.value || appError.value)
-const runtimeModelInfo = computed<ModelInfo | null>(() => {
-  const backendRuntime = backendTranscriber.backendInfo.value
-  const activeResult = displayedResult.value
 
-  if (modelInfo.value || activeResult?.model) {
-    return {
-      hardware: modelInfo.value?.hardware ?? activeResult?.hardware ?? backendRuntime?.hardware,
-      model: modelInfo.value?.model ?? activeResult?.model ?? selectedModel.value,
-      dtype: modelInfo.value?.dtype ?? activeResult?.dtype,
-      engine: modelInfo.value?.engine ?? activeResult?.engine ?? backendRuntime?.engine,
-      executionBackend:
-        modelInfo.value?.executionBackend ??
-        activeResult?.execution_backend ??
-        backendRuntime?.execution_backend,
-    }
+const buildViewedSessionModelInfo = (result: TranscribeResult): ModelInfo => ({
+  hardware: result.hardware,
+  model: result.model ?? 'N/A',
+  dtype: result.dtype,
+  engine: result.engine,
+  executionBackend: result.execution_backend,
+})
+
+const runtimeModelInfo = computed<ModelInfo | null>(() => {
+  if (showStatus.value) {
+    return modelInfo.value
+  }
+
+  if (displayedResult.value) {
+    return buildViewedSessionModelInfo(displayedResult.value)
   }
 
   return null
@@ -163,10 +163,8 @@ const onFileSelected = async (file: File) => {
     setCurrentAudio(url, blob, dur)
     addTemporarySession(sessionId, file.name, dur)
 
-    log.info(
-      `New transcription started (session: ${sessionId}, file: ${file.name}, VAD=${useVad.value})`,
-    )
-    await backendTranscriber.transcribe(file, selectedModel.value, useVad.value)
+    log.info(`New transcription started (session: ${sessionId}, file: ${file.name})`)
+    await backendTranscriber.transcribe(file, selectedModel.value)
   } catch (err: unknown) {
     appError.value = err instanceof Error ? err.message : String(err)
     isProcessing.value = false
@@ -212,13 +210,11 @@ onMounted(async () => {
       <div class="container">
         <TranscriptionControls
           :model-id="selectedModel"
-          :use-vad="useVad"
           :is-dark-theme="currentTheme === 'dark'"
           :is-processing="isProcessing"
           :visible-model-options="visibleModelOptions"
           :is-highlight-enabled="isHighlightEnabled"
           @update:model-id="selectedModel = $event"
-          @update:use-vad="useVad = $event"
           @update:is-highlight-enabled="isHighlightEnabled = $event"
           @toggle-theme="toggleTheme"
         />

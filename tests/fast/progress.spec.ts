@@ -36,11 +36,12 @@ test.describe('Vibe Transcription - Fast Loop', () => {
     })
 
     test('runtime info shows architecture, model, and execution backend', async ({ page }) => {
-      await setupMockBackend(page, { delay: 500 })
+      await setupMockBackend(page, { delay: 1500 })
       await page.goto('/')
 
       await uploadTestAudio(page)
 
+      await expect(page.locator('#status-text')).toContainText(/Loading model|Transcribing/)
       await expect(page.locator('#runtime-info')).toBeVisible()
       await expect(page.locator('#runtime-architecture')).toContainText(
         MOCK_BACKEND_INFO.hardware.toUpperCase(),
@@ -51,6 +52,7 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       )
       await expect(page.locator('#runtime-execution-backend')).toContainText(MOCK_ENGINE)
       await expect(page.locator('#runtime-execution-backend')).toContainText(MOCK_DTYPE)
+      await expect(page.locator('#transcript-container')).toBeVisible()
     })
 
     test('backend flow does not show worker download progress UI', async ({ page }) => {

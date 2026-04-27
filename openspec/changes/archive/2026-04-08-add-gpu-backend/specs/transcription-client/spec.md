@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Upload audio to backend
-The frontend SHALL upload the selected audio file to the backend `POST /api/transcribe` endpoint via `fetch` with multipart/form-data. The upload SHALL include the selected model ID and VAD toggle state as query parameters.
+The frontend SHALL upload the selected audio file to the backend `POST /api/transcribe` endpoint via `fetch` with multipart/form-data. The upload SHALL include the selected model ID as a query parameter.
 
 #### Scenario: Upload triggers backend transcription
 - **WHEN** user selects an audio file and clicks transcribe (or auto-starts)
-- **THEN** frontend uploads the audio file to `POST /api/transcribe?model={id}&vad={boolean}` and begins consuming the SSE response
+- **THEN** frontend uploads the audio file to `POST /api/transcribe?model={id}` and begins consuming the SSE response
 
 ### Requirement: Display streaming progress from backend
 The frontend SHALL parse SSE events from the backend response and update the existing progress UI (StatusBar). The frontend SHALL map backend SSE events to the same reactive refs used by the current Worker-based flow (`status`, `progressInfo`, `isProcessing`).

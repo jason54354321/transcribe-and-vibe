@@ -118,6 +118,7 @@ function getMockBackendScript(options?: MockBackendOptions) {
       }
 
       if (url.pathname.endsWith('/api/transcribe')) {
+        window.__lastTranscribeUrl = url.toString();
         const model = url.searchParams.get('model') || BACKEND_INFO.default_model || DEFAULT_MODEL_ID;
         const encoder = new TextEncoder();
 

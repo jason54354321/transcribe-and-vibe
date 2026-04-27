@@ -16,7 +16,7 @@ The system SHALL accept audio files via drag-and-drop or file picker in the brow
 - **THEN** system displays an error message: "File exceeds 100MB limit"
 
 ### Requirement: Word-level transcription via backend
-The system SHALL transcribe audio using the local Python backend with GPU-accelerated ASR (faster-whisper or mlx-whisper). The backend SHALL use VAD preprocessing (Silero) to segment audio before transcription. The backend SHALL return word-level timestamps. The result format SHALL match the existing `{ text, chunks: [{ text, timestamp }] }` shape.
+The system SHALL transcribe audio using the local Python backend with GPU-accelerated ASR (faster-whisper or mlx-whisper). The backend SHALL apply engine-supported segmentation/transcription behavior automatically. The backend SHALL return word-level timestamps. The result format SHALL match the existing `{ text, chunks: [{ text, timestamp }] }` shape.
 
 #### Scenario: Transcription produces word-level timestamps
 - **WHEN** a valid English audio file is transcribed via the backend

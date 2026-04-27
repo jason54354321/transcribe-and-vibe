@@ -49,6 +49,8 @@ async def lifespan(app: FastAPI):
     logger.info('Detecting hardware...')
     hardware = detect_hardware()
     logger.info(f'Hardware: {hardware.device_type} ({hardware.device_name}, {hardware.memory_gb}GB)')
+    if os.getenv('VIBE_FORCE_CPU', '').strip().lower() in {'1', 'true', 'yes', 'on'}:
+        logger.info('CPU mode forced by VIBE_FORCE_CPU')
     logger.info(f'Engine: {hardware.engine}')
 
     engine = create_engine(hardware)
@@ -93,7 +95,6 @@ def _run_transcription(
     eng: TranscriptionEngine,
     audio_path: str,
     model_id: str,
-    use_vad: bool,
     q: queue.Queue[str | None],
 ) -> None:
     """Run transcription in a thread, pushing SSE events into the queue."""
@@ -109,7 +110,6 @@ def _run_transcription(
         result = eng.transcribe(
             audio_path=audio_path,
             model_id=model_id,
-            use_vad=use_vad,
             on_progress=on_progress,
         )
         q.put(_sse_event('result', {
@@ -127,7 +127,6 @@ def _run_transcription(
 async def transcribe(
     file: UploadFile = File(...),
     model: str | None = Query(None, description='Model ID from registry'),
-    vad: bool = Query(True, description='Enable VAD preprocessing'),
 ):
     filename = file.filename or ''
     ext = os.path.splitext(filename)[1].lower()
@@ -159,7 +158,7 @@ async def transcribe(
 
             thread = threading.Thread(
                 target=_run_transcription,
-                args=(engine, tmp_path, model_id, vad, q),
+                args=(engine, tmp_path, model_id, q),
                 daemon=True,
             )
             thread.start()

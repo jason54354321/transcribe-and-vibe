@@ -33,12 +33,12 @@ The system SHALL return results in the same JSON shape as the existing Worker pr
 - **WHEN** transcription completes for an English audio file
 - **THEN** result JSON contains `text` (full transcript) and `chunks` array with word-level entries, each having `text` and `timestamp: [start, end]` in seconds
 
-### Requirement: Model and VAD selection via query parameters
-The system SHALL accept optional query parameters `model` (model ID from registry) and `vad` (boolean, default true). If `model` is omitted, the system SHALL use the default model for the detected hardware. If `vad=false`, the system SHALL skip VAD preprocessing.
+### Requirement: Model selection via query parameters
+The system SHALL accept an optional `model` query parameter (model ID from registry). If `model` is omitted, the system SHALL use the default model for the detected hardware. Engine-supported VAD behavior is applied automatically and is not user-configurable.
 
 #### Scenario: Explicit model selection
-- **WHEN** client sends `POST /api/transcribe?model=large-v3-turbo&vad=false`
-- **THEN** server uses the specified model without VAD preprocessing
+- **WHEN** client sends `POST /api/transcribe?model=large-v3-turbo`
+- **THEN** server uses the specified model while keeping engine-supported VAD behavior automatic
 
 #### Scenario: Default model selection
 - **WHEN** client sends `POST /api/transcribe` without model parameter

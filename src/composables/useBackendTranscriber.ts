@@ -112,7 +112,7 @@ export function useBackendTranscriber() {
   const getBackendUnavailableMessage = () =>
     'Backend is unreachable. Start the backend service, then try transcription again.'
 
-  const transcribe = async (file: File, modelId?: string, useVad = true) => {
+  const transcribe = async (file: File, modelId?: string) => {
     error.value = null
     result.value = null
     modelInfo.value = null
@@ -132,9 +132,8 @@ export function useBackendTranscriber() {
 
     const params = new URLSearchParams()
     params.set('model', resolvedModel)
-    params.set('vad', String(useVad))
 
-    log.info(`Starting backend transcription (model=${resolvedModel}, VAD=${useVad})`)
+    log.info(`Starting backend transcription (model=${resolvedModel})`)
 
     try {
       const res = await fetch(`${API_BASE}/transcribe?${params}`, {

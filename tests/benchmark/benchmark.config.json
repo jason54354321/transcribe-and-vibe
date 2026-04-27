@@ -1,0 +1,23 @@
+{
+  "models": [
+    {
+      "id": "base",
+      "label": "Base"
+    },
+    {
+      "id": "small",
+      "label": "Small"
+    },
+    {
+      "id": "large-v3",
+      "label": "Large V3"
+    }
+  ],
+  "samples": [
+    {
+      "id": "l1",
+      "audioPath": "tests/benchmark/l1.mp3",
+      "referencePath": "tests/benchmark/l1_answer.txt"
+    }
+  ]
+}

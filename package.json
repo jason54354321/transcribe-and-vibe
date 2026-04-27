@@ -33,7 +33,6 @@
     "vue-tsc": "^3.2.6"
   },
   "dependencies": {
-    "@ricky0123/vad-web": "^0.0.30",
     "idb": "^8.0.3",
     "vue": "^3.5.31"
   }

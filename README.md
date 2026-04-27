@@ -136,7 +136,7 @@ src/
     DropZone.vue              # Drag-and-drop file input
     SessionList.vue           # Sidebar with session history
     StatusBar.vue             # Progress/status display + runtime info area
-    TranscriptionControls.vue # Model/VAD/theme/highlight controls
+    TranscriptionControls.vue # Model/theme/highlight controls
     TranscriptView.vue        # Word-level transcript with click-to-seek
   composables/
     useBackendTranscriber.ts  # Backend-only transcription path: fetch + SSE + runtime metadata
@@ -178,7 +178,7 @@ scripts/
 | Frontend | Vue 3 + Composition API, TypeScript 6 (strict) |
 | Bundler | Vite 8 |
 | Backend runtime | FastAPI + mlx-whisper / faster-whisper |
-| Audio preprocessing | Browser file decode + backend VAD toggle |
+| Audio preprocessing | Browser file decode + backend transcription pipeline |
 | Testing | Playwright (E2E) + Vitest (unit) |
 | Persistence | IndexedDB via idb |
 

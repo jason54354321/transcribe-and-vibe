@@ -13,6 +13,21 @@ export type WerResult = {
   hypothesisWords: number
 }
 
+const LEADING_BENCHMARK_METADATA_PATTERN =
+  /^\s*\d+\s+words\s+·\s+\d+m\s+\d+s\s+(?=section\s+\d+\b)/i
+
+export function stripBenchmarkUiMetadata(text: string): string {
+  return text.replace(LEADING_BENCHMARK_METADATA_PATTERN, '').trim()
+}
+
+export function formatBenchmarkDuration(durationMs: number): string {
+  const totalSeconds = Math.max(0, Math.round(durationMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  return `${minutes}m ${seconds}s`
+}
+
 /**
  * Normalize text for WER comparison:
  * - Lowercase
@@ -21,7 +36,7 @@ export type WerResult = {
  * - Trim
  */
 export function normalizeText(text: string): string {
-  return text
+  return stripBenchmarkUiMetadata(text)
     .toLowerCase()
     .replace(/[^\w\s]/g, '')
     .replace(/\s+/g, ' ')

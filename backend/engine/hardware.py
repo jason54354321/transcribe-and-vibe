@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 from dataclasses import dataclass
@@ -13,6 +14,11 @@ class HardwareInfo:
     device_name: str
     memory_gb: float
     engine: str  # 'mlx-whisper' | 'faster-whisper'
+
+
+def _force_cpu_enabled() -> bool:
+    value = os.getenv('VIBE_FORCE_CPU', '').strip().lower()
+    return value in {'1', 'true', 'yes', 'on'}
 
 
 def _detect_apple_silicon() -> HardwareInfo | None:
@@ -91,6 +97,14 @@ def _detect_cuda() -> HardwareInfo | None:
 
 def detect_hardware() -> HardwareInfo:
     """Detect best available hardware, in priority order."""
+    if _force_cpu_enabled():
+        return HardwareInfo(
+            device_type='cpu',
+            device_name='Forced CPU mode',
+            memory_gb=0.0,
+            engine='faster-whisper',
+        )
+
     # Apple Silicon + MLX first (if on Mac)
     hw = _detect_apple_silicon()
     if hw:

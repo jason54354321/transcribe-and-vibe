@@ -1,11 +1,11 @@
 ## MODIFIED Requirements
 
 ### Requirement: Upload audio to backend
-The frontend SHALL upload the selected audio file to the backend `POST /api/transcribe` endpoint via `fetch` with multipart/form-data. The upload SHALL include the selected model ID and VAD toggle state as query parameters when those controls are available. The frontend SHALL NOT attempt browser-side transcription when the backend is unreachable.
+The frontend SHALL upload the selected audio file to the backend `POST /api/transcribe` endpoint via `fetch` with multipart/form-data. The upload SHALL include the selected model ID as a query parameter. The frontend SHALL NOT attempt browser-side transcription when the backend is unreachable.
 
 #### Scenario: Upload triggers backend transcription
 - **WHEN** user selects an audio file and starts transcription
-- **THEN** frontend uploads the audio file to `POST /api/transcribe?model={id}&vad={boolean}` using the current backend transcription settings and begins consuming the SSE response
+- **THEN** frontend uploads the audio file to `POST /api/transcribe?model={id}` using the current backend transcription settings and begins consuming the SSE response
 
 #### Scenario: Backend unavailable at transcription time
 - **WHEN** user starts transcription while the backend is unreachable

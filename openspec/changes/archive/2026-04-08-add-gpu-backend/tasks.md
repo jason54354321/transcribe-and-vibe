@@ -11,8 +11,8 @@
 
 ## 3. Transcription Engine
 
-- [x] 3.1 Define abstract `TranscriptionEngine` interface with `transcribe(audio_path, model_id, use_vad, on_progress)` method
-- [x] 3.2 Implement `FasterWhisperEngine` — load model, transcribe with `word_timestamps=True`, `vad_filter` toggle, emit progress callbacks
+- [x] 3.1 Define abstract `TranscriptionEngine` interface with `transcribe(audio_path, model_id, on_progress)` method
+- [x] 3.2 Implement `FasterWhisperEngine` — load model, transcribe with `word_timestamps=True` and engine-native filtering, emit progress callbacks
 - [x] 3.3 Implement `MlxWhisperEngine` — load model via mlx-whisper, transcribe with word timestamps, emit progress callbacks
 - [x] 3.4 Implement engine factory that selects engine based on detected hardware
 

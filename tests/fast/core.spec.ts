@@ -2,8 +2,10 @@ import { expect, test } from '@playwright/test'
 
 import { MOCK_CHUNKS, setupMockBackend, uploadTestAudio } from '../fixtures'
 
-declare const Buffer: {
-  from(input: string): Uint8Array
+declare global {
+  interface Window {
+    __lastTranscribeUrl?: string
+  }
 }
 
 test.describe('Vibe Transcription - Fast Loop', () => {
@@ -19,6 +21,17 @@ test.describe('Vibe Transcription - Fast Loop', () => {
       await expect(page.locator('#audio-container')).toBeHidden()
       await expect(page.locator('#transcript-container')).toBeHidden()
       await expect(page.locator('#error-container')).toBeHidden()
+      await expect(page.locator('#vad-toggle')).toHaveCount(0)
+    })
+
+    test('transcription request does not include legacy vad query parameter', async ({ page }) => {
+      await uploadTestAudio(page)
+      await expect(page.locator('#transcript-container')).toBeVisible()
+
+      const lastTranscribeUrl = await page.evaluate(() => window.__lastTranscribeUrl ?? null)
+
+      expect(lastTranscribeUrl).not.toBeNull()
+      expect(new URL(lastTranscribeUrl ?? 'http://localhost').searchParams.has('vad')).toBe(false)
     })
 
     test('file upload shows transcript', async ({ page }) => {
@@ -29,10 +42,14 @@ test.describe('Vibe Transcription - Fast Loop', () => {
     })
 
     test('invalid file type rejected', async ({ page }) => {
-      await page.locator('#file-input').setInputFiles({
-        name: 'test.txt',
-        mimeType: 'text/plain',
-        buffer: Buffer.from('hello'),
+      await page.evaluate(() => {
+        const dt = new DataTransfer()
+        const file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+        dt.items.add(file)
+
+        const input = document.getElementById('file-input') as HTMLInputElement
+        input.files = dt.files
+        input.dispatchEvent(new Event('change', { bubbles: true }))
       })
 
       await expect(page.locator('#error-container')).toBeVisible()

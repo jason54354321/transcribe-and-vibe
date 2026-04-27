@@ -33,7 +33,6 @@ export type TranscriptionProgress = {
 
 export type TranscribeOptions = {
   model: string
-  useVad?: boolean
   dtype?: string
 }
 

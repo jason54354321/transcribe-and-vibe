@@ -10,7 +10,6 @@ type ModelOption = {
 
 const props = defineProps<{
   modelId: string
-  useVad: boolean
   isDarkTheme: boolean
   isProcessing: boolean
   visibleModelOptions: ModelOption[]
@@ -19,7 +18,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelId': [value: string]
-  'update:useVad': [value: boolean]
   'update:isHighlightEnabled': [value: boolean]
   toggleTheme: []
 }>()
@@ -36,16 +34,6 @@ const emit = defineEmits<{
       @update:model-id="emit('update:modelId', $event)"
     />
     <div class="option-toggles">
-      <label class="toggle-label">
-        <input
-          id="vad-toggle"
-          type="checkbox"
-          :checked="props.useVad"
-          :disabled="props.isProcessing"
-          @change="emit('update:useVad', ($event.target as HTMLInputElement).checked)"
-        />
-        <span>VAD preprocessing</span>
-      </label>
       <label class="toggle-label">
         <input
           id="theme-toggle"

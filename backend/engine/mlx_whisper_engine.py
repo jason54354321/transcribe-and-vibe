@@ -32,7 +32,6 @@ class MlxWhisperEngine(TranscriptionEngine):
         self,
         audio_path: str,
         model_id: str,
-        use_vad: bool = True,
         on_progress: ProgressCallback | None = None,
     ) -> TranscribeResult:
         import mlx_whisper

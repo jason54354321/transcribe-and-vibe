@@ -73,7 +73,7 @@ Vibe 目前同時維護兩條轉錄路徑：後端可用時走 `useBackendTransc
 這次 change 的目標是收斂 execution path，不是擴張 API surface。保留既有 endpoint 與主要 payload 形狀，僅補齊規格已要求的 chunk-level progress event，可以讓前端與測試取得更精確的進度資訊，同時避免連帶改壞 transcript rendering 與 session persistence。
 
 ### D6: 測試策略從 mock Worker 轉為 mock backend/SSE
-**Choice**: 既有 fast tests 改以 mock backend 回應與 SSE 事件為主，移除對 mock worker 與瀏覽器端 VAD/ONNX fallback 的依賴。
+**Choice**: 既有 fast tests 改以 mock backend 回應與 SSE 事件為主，移除對 mock worker 與舊瀏覽器端前處理/ONNX fallback 的依賴。
 
 **Alternatives considered:**
 - 保留現有 worker mocks，只在少數測試改 backend
@@ -88,7 +88,7 @@ Vibe 目前同時維護兩條轉錄路徑：後端可用時走 `useBackendTransc
 - **[隱私敘事改變]** → 音訊不再保證停留在瀏覽器記憶體內；以 local/backend-first 定位與 UI 文案明確揭露緩解。
 - **[CPU fallback 較慢]** → 長音訊在 CPU-only 環境等待時間會顯著增加；以 CPU-safe 預設模型、runtime info 與進度訊息緩解。
 - **[測試重寫成本]** → 既有 fast Playwright 測試大量依賴 mock worker；以分階段轉換 fixture 與 selector 兼容性檢查緩解。
-- **[殘留死碼風險]** → Worker/VAD/ONNX 周邊若移除不完整，容易留下未使用設定與文件；以 tasks 明確列出清理範圍緩解。
+- **[殘留死碼風險]** → Worker/舊前處理/ONNX 周邊若移除不完整，容易留下未使用設定與文件；以 tasks 明確列出清理範圍緩解。
 
 ## Migration Plan
 

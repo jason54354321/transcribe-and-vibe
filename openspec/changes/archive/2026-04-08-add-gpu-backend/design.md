@@ -35,13 +35,13 @@ Key constraint: the user runs Apple M4 with 16GB unified memory. The backend mus
 **Rationale**: mlx-whisper is the fastest option on Apple Silicon (native Metal acceleration). faster-whisper (CTranslate2) is the most mature option for CUDA with int8 quantization. Both expose similar Python APIs, making a common wrapper feasible.
 
 ### D3: Common transcription interface
-**Choice**: Python abstract base class `TranscriptionEngine` with `transcribe(audio_path, model, vad, on_progress)` method. Concrete implementations: `MlxWhisperEngine`, `FasterWhisperEngine`.
+**Choice**: Python abstract base class `TranscriptionEngine` with `transcribe(audio_path, model, on_progress)` method. Concrete implementations: `MlxWhisperEngine`, `FasterWhisperEngine`.
 **Rationale**: Decouples API layer from engine specifics. Adding new engines (e.g., Whisper.cpp, NeMo) requires only a new class.
 
-### D4: VAD handling — engine-native
-**Choice**: Use each engine's built-in VAD support rather than a separate VAD step.
-**Alternatives considered**: Separate Silero VAD preprocessing (current browser approach).
-**Rationale**: faster-whisper has built-in Silero VAD (`vad_filter=True`). mlx-whisper processes audio in chunks natively. Avoids duplicating VAD logic.
+### D4: Automatic segmentation handling — engine-native
+**Choice**: Use each engine's built-in segmentation/transcription behavior rather than exposing a separate preprocessing option.
+**Alternatives considered**: Separate preprocessing before transcription.
+**Rationale**: faster-whisper supports built-in filtering (`vad_filter=True`). mlx-whisper processes audio in chunks natively. Avoids duplicating segmentation logic or exposing extra user controls.
 
 ### D5: Model defaults — large-v3-turbo
 **Choice**: Default to `large-v3-turbo` on all hardware with GPU. Fall back to `base` on CPU-only.

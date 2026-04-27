@@ -1,9 +1,14 @@
 /**
- * Benchmark configuration — extensible model × VAD matrix.
+ * Benchmark configuration loader.
  *
- * To add models: append to DEFAULT_MODELS.
- * To add samples: place audio + transcript in tests/benchmark/, add to BENCHMARK_SAMPLES.
+ * Source of truth: `tests/benchmark/benchmark.config.json`
+ *
+ * Open that file to see exactly what benchmark will run:
+ * - which models
+ * - which samples
  */
+
+import benchmarkConfigJson from './benchmark.config.json'
 
 export type BenchmarkModel = {
   /** Backend model ID */
@@ -23,8 +28,9 @@ export type BenchmarkSample = {
 
 export type BenchmarkRunResult = {
   model: BenchmarkModel
-  useVad: boolean
   sample: string
+  hardware: string
+  executionBackend: string
   hypothesis: string
   reference: string
   wer: number
@@ -34,20 +40,55 @@ export type BenchmarkRunResult = {
   durationMs: number
 }
 
-/** Models to benchmark — add entries to extend */
-export const DEFAULT_MODELS: BenchmarkModel[] = [
-  {
-    id: 'base',
-    label: 'Base',
-  },
-  {
-    id: 'small',
-    label: 'Small',
-  },
-]
+type BenchmarkConfigFile = {
+  models: BenchmarkModel[]
+  samples: BenchmarkSample[]
+}
 
-/** VAD on/off toggle */
-export const VAD_OPTIONS = [true, false] as const
+function isBenchmarkModel(value: unknown): value is BenchmarkModel {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    typeof (value as BenchmarkModel).id === 'string' &&
+    typeof (value as BenchmarkModel).label === 'string'
+  )
+}
+
+function isBenchmarkSample(value: unknown): value is BenchmarkSample {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    typeof (value as BenchmarkSample).id === 'string' &&
+    typeof (value as BenchmarkSample).audioPath === 'string' &&
+    typeof (value as BenchmarkSample).referencePath === 'string'
+  )
+}
+
+function parseConfigFile(rawValue: string): BenchmarkConfigFile {
+  const parsed = JSON.parse(rawValue) as unknown
+
+  if (typeof parsed !== 'object' || parsed == null) {
+    throw new Error('Benchmark config must be a JSON object')
+  }
+
+  const { models, samples } = parsed as Partial<BenchmarkConfigFile>
+
+  if (!Array.isArray(models) || models.length === 0 || !models.every(isBenchmarkModel)) {
+    throw new Error('Benchmark config "models" must be a non-empty array of { id, label }')
+  }
+
+  if (!Array.isArray(samples) || samples.length === 0 || !samples.every(isBenchmarkSample)) {
+    throw new Error(
+      'Benchmark config "samples" must be a non-empty array of { id, audioPath, referencePath }',
+    )
+  }
+
+  return { models, samples }
+}
+
+const benchmarkConfig = parseConfigFile(JSON.stringify(benchmarkConfigJson))
+
+export const DEFAULT_MODELS: BenchmarkModel[] = benchmarkConfig.models
 
 /**
  * Benchmark samples — local audio files with reference transcripts.
@@ -55,12 +96,6 @@ export const VAD_OPTIONS = [true, false] as const
  * To add a new sample:
  *   1. Place audio file (mp3/wav/m4a) in tests/benchmark/
  *   2. Place plain-text reference transcript alongside it
- *   3. Append an entry here
+ *   3. Add an entry to tests/benchmark/benchmark.config.json
  */
-export const BENCHMARK_SAMPLES: BenchmarkSample[] = [
-  {
-    id: 'l1',
-    audioPath: 'tests/benchmark/l1.mp3',
-    referencePath: 'tests/benchmark/l1_answer.txt',
-  },
-]
+export const BENCHMARK_SAMPLES: BenchmarkSample[] = benchmarkConfig.samples

@@ -62,7 +62,6 @@ class FasterWhisperEngine(TranscriptionEngine):
         self,
         audio_path: str,
         model_id: str,
-        use_vad: bool = True,
         on_progress: ProgressCallback | None = None,
     ) -> TranscribeResult:
         config = get_model(model_id)
@@ -83,7 +82,7 @@ class FasterWhisperEngine(TranscriptionEngine):
         segments_gen, info = model.transcribe(
             audio_path,
             word_timestamps=True,
-            vad_filter=use_vad,
+            vad_filter=True,
             beam_size=5,
         )
 
