@@ -5,10 +5,12 @@
  * Configure what runs: edit tests/benchmark/benchmark.config.json
  */
 import { test } from '@playwright/test'
-import { DEFAULT_MODELS } from './config'
+import { DEFAULT_MODELS, EXPECTED_RUNTIME } from './config'
 import type { BenchmarkRunResult } from './config'
 import { loadSamples } from './dataset'
-import { computeWER, formatBenchmarkDuration, stripBenchmarkUiMetadata } from './wer'
+import { assertExpectedRuntime, writeBenchmarkArtifacts } from './report'
+import type { BenchmarkBackendInfo } from './report'
+import { computeWER, formatBenchmarkDuration } from './wer'
 
 test('ASR benchmark: runtime × model × sample matrix', async ({ page }) => {
   const samples = loadSamples()
@@ -16,6 +18,10 @@ test('ASR benchmark: runtime × model × sample matrix', async ({ page }) => {
 
   await page.goto('/')
   await page.waitForSelector('#drop-zone', { state: 'visible' })
+
+  const infoResponse = await page.request.get('/api/info')
+  const backendInfo = (await infoResponse.json()) as BenchmarkBackendInfo
+  const runtime = assertExpectedRuntime(EXPECTED_RUNTIME, backendInfo)
 
   for (const model of DEFAULT_MODELS) {
     await page.locator('#model-select').selectOption(model.id)
@@ -47,8 +53,13 @@ test('ASR benchmark: runtime × model × sample matrix', async ({ page }) => {
         (await page.locator('#runtime-architecture .runtime-value').textContent()) ?? 'N/A'
       const executionBackend =
         (await page.locator('#runtime-execution-backend .runtime-value').textContent()) ?? 'N/A'
-      const transcriptText = (await page.locator('#transcript-content').textContent()) ?? ''
-      const hypothesis = stripBenchmarkUiMetadata(transcriptText)
+      const rawTranscript = await page.locator('#benchmark-raw-transcript').textContent()
+      const hypothesis = rawTranscript?.trim() ?? ''
+
+      if (!hypothesis) {
+        throw new Error('Benchmark raw transcript source is empty')
+      }
+
       const wer = computeWER(hypothesis, sample.reference)
 
       results.push({
@@ -94,4 +105,7 @@ test('ASR benchmark: runtime × model × sample matrix', async ({ page }) => {
       Time: formatBenchmarkDuration(r.durationMs),
     })),
   )
+
+  const outputDir = writeBenchmarkArtifacts(results, runtime)
+  console.log(`Benchmark artifacts written to ${outputDir}`)
 })

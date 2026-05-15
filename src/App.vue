@@ -59,6 +59,7 @@ watch(isHighlightEnabled, (enabled) => {
 })
 
 const displayedResult = ref<TranscribeResult | null>(null)
+const showBenchmarkRawTranscript = import.meta.env.VITE_BENCHMARK_RAW_TRANSCRIPT === '1'
 const sessionOrchestration = useSessionOrchestration({
   transcriberResult,
   transcriberError,
@@ -249,6 +250,15 @@ onMounted(async () => {
           class="transcription-meta"
         >
           Transcribed in {{ transcriptionTimeDisplay }}
+        </div>
+
+        <div
+          v-if="showBenchmarkRawTranscript"
+          id="benchmark-raw-transcript"
+          hidden
+          aria-hidden="true"
+        >
+          {{ displayedResult?.text ?? '' }}
         </div>
 
         <TranscriptView

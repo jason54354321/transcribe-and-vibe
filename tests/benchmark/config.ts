@@ -10,6 +10,8 @@
 
 import benchmarkConfigJson from './benchmark.config.json'
 
+export type BenchmarkRuntime = 'cpu' | 'gpu'
+
 export type BenchmarkModel = {
   /** Backend model ID */
   id: string
@@ -41,8 +43,13 @@ export type BenchmarkRunResult = {
 }
 
 type BenchmarkConfigFile = {
+  expectedRuntime: BenchmarkRuntime
   models: BenchmarkModel[]
   samples: BenchmarkSample[]
+}
+
+function isBenchmarkRuntime(value: unknown): value is BenchmarkRuntime {
+  return value === 'cpu' || value === 'gpu'
 }
 
 function isBenchmarkModel(value: unknown): value is BenchmarkModel {
@@ -71,7 +78,11 @@ function parseConfigFile(rawValue: string): BenchmarkConfigFile {
     throw new Error('Benchmark config must be a JSON object')
   }
 
-  const { models, samples } = parsed as Partial<BenchmarkConfigFile>
+  const { expectedRuntime, models, samples } = parsed as Partial<BenchmarkConfigFile>
+
+  if (!isBenchmarkRuntime(expectedRuntime)) {
+    throw new Error('Benchmark config "expectedRuntime" must be either "cpu" or "gpu"')
+  }
 
   if (!Array.isArray(models) || models.length === 0 || !models.every(isBenchmarkModel)) {
     throw new Error('Benchmark config "models" must be a non-empty array of { id, label }')
@@ -83,10 +94,12 @@ function parseConfigFile(rawValue: string): BenchmarkConfigFile {
     )
   }
 
-  return { models, samples }
+  return { expectedRuntime, models, samples }
 }
 
 const benchmarkConfig = parseConfigFile(JSON.stringify(benchmarkConfigJson))
+
+export const EXPECTED_RUNTIME: BenchmarkRuntime = benchmarkConfig.expectedRuntime
 
 export const DEFAULT_MODELS: BenchmarkModel[] = benchmarkConfig.models
 

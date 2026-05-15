@@ -1,5 +1,3 @@
-- free model after trancribe
-
 - auto scrolling when playing
 
 - english learning mode

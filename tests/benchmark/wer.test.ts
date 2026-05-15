@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  computeWER,
-  normalizeText,
-  computeAverageWER,
-  stripBenchmarkUiMetadata,
-  formatBenchmarkDuration,
-} from './wer'
+import { computeWER, normalizeText, computeAverageWER, formatBenchmarkDuration } from './wer'
 
 describe('normalizeText', () => {
   it('lowercases text', () => {
@@ -26,28 +20,6 @@ describe('normalizeText', () => {
 
   it('handles empty string', () => {
     expect(normalizeText('')).toBe('')
-  })
-
-  it('strips benchmark UI metadata before normalization', () => {
-    expect(
-      normalizeText('365 words · 3m 52s Section 1. You will hear a man booking a tourist tour.'),
-    ).toBe('section 1 you will hear a man booking a tourist tour')
-  })
-})
-
-describe('stripBenchmarkUiMetadata', () => {
-  it('removes leading transcript meta info from benchmark hypothesis text', () => {
-    expect(
-      stripBenchmarkUiMetadata(
-        '365 words · 3m 52s Section 1. You will hear a man booking a tourist tour.',
-      ),
-    ).toBe('Section 1. You will hear a man booking a tourist tour.')
-  })
-
-  it('leaves normal transcript text unchanged', () => {
-    expect(stripBenchmarkUiMetadata('Hello world from the transcript')).toBe(
-      'Hello world from the transcript',
-    )
   })
 })
 

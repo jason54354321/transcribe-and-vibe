@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { BENCHMARK_SAMPLES, DEFAULT_MODELS } from './config'
+import { BENCHMARK_SAMPLES, DEFAULT_MODELS, EXPECTED_RUNTIME } from './config'
 
 describe('benchmark config', () => {
   it('loads the full benchmark matrix from one config file', () => {
+    expect(EXPECTED_RUNTIME).toBe('gpu')
     expect(DEFAULT_MODELS).toEqual([
       { id: 'base', label: 'Base' },
       { id: 'small', label: 'Small' },

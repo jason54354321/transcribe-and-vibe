@@ -92,6 +92,7 @@ bun run test:backend:isolated # Starts isolated backend/frontend ports, then run
 bun run test:slow        # Slow E2E — real Whisper model, ~20s (downloads ~150 MB on first run)
 bun run test:all         # All Playwright projects
 bun run test:unit        # Vitest unit tests (src/**/*.test.ts)
+bun run benchmark        # ASR benchmark — see tests/benchmark/README.md
 ```
 
 ### Backend Tests
@@ -161,8 +162,11 @@ tests/
   slow.spec.ts                # E2E test with real Whisper model
   backend.spec.ts             # 4 backend integration tests
   fixtures.ts                 # Mock backend/SSE + test utilities
+  benchmark/                  # ASR WER benchmark — see tests/benchmark/README.md
 scripts/
-  test-backend-isolated.mjs   # Isolated backend/frontend launcher for backend Playwright
+  playwright-isolated-runner.mjs # Shared backend+frontend launcher for isolated Playwright runs
+  test-backend-isolated.mjs   # Wrapper: runs --project=backend in isolated env
+  test-benchmark-isolated.mjs # Wrapper: runs --project=benchmark in isolated env
 ```
 
 ### Pre-push Checklist

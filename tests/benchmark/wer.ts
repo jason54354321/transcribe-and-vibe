@@ -13,13 +13,6 @@ export type WerResult = {
   hypothesisWords: number
 }
 
-const LEADING_BENCHMARK_METADATA_PATTERN =
-  /^\s*\d+\s+words\s+·\s+\d+m\s+\d+s\s+(?=section\s+\d+\b)/i
-
-export function stripBenchmarkUiMetadata(text: string): string {
-  return text.replace(LEADING_BENCHMARK_METADATA_PATTERN, '').trim()
-}
-
 export function formatBenchmarkDuration(durationMs: number): string {
   const totalSeconds = Math.max(0, Math.round(durationMs / 1000))
   const minutes = Math.floor(totalSeconds / 60)
@@ -36,7 +29,7 @@ export function formatBenchmarkDuration(durationMs: number): string {
  * - Trim
  */
 export function normalizeText(text: string): string {
-  return stripBenchmarkUiMetadata(text)
+  return text
     .toLowerCase()
     .replace(/[^\w\s]/g, '')
     .replace(/\s+/g, ' ')

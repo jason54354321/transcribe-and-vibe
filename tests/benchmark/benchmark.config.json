@@ -1,4 +1,5 @@
 {
+  "expectedRuntime": "gpu",
   "models": [
     {
       "id": "base",

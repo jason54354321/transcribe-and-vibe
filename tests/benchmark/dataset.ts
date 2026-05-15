@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Load benchmark samples from local fixture files.
  */
