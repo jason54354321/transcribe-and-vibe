@@ -1,0 +1,23 @@
+[
+  {
+    "model": "base",
+    "device": "cpu",
+    "compute_type": "int8",
+    "cold_load_s": 1.141,
+    "warm_load_s": 0.542
+  },
+  {
+    "model": "small",
+    "device": "cpu",
+    "compute_type": "int8",
+    "cold_load_s": 37.343,
+    "warm_load_s": 0.626
+  },
+  {
+    "model": "large-v3-turbo",
+    "device": "cpu",
+    "compute_type": "int8",
+    "cold_load_s": 113.306,
+    "warm_load_s": 4.401
+  }
+]
