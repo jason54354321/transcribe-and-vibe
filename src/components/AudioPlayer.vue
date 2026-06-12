@@ -60,33 +60,45 @@ defineExpose({
   position: sticky;
   top: 0;
   background: var(--sticky-bg);
-  backdrop-filter: blur(10px);
-  padding: var(--spacing-unit) 0;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  padding: 12px 0;
+  margin: 0 calc(var(--spacing-unit) * -1);
+  padding-left: var(--spacing-unit);
+  padding-right: var(--spacing-unit);
   border-bottom: 1px solid transparent;
   z-index: 100;
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
 .audio-container.stuck {
   border-bottom-color: var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 audio {
   width: 100%;
-  border-radius: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
   outline: none;
 }
 
 .volume-indicator {
   position: absolute;
   top: 50%;
-  right: calc(var(--spacing-unit) * 0.75);
+  right: calc(var(--spacing-unit) + 6px);
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-  font-size: 13px;
-  padding: 4px 10px;
-  border-radius: var(--radius);
+  background: var(--text-color);
+  color: var(--bg-color);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
   pointer-events: none;
   white-space: nowrap;
 }

@@ -75,12 +75,18 @@ function formatRelativeTime(timestamp: number): string {
     aria-label="Session history"
   >
     <div class="sidebar-header">
-      <h1 class="app-title">Vibe</h1>
-      <button class="new-btn" @click="emit('new-session')">+ New</button>
+      <h1 class="app-title"><span class="brand-mark" aria-hidden="true"></span>Vibe</h1>
+      <button class="new-btn" @click="emit('new-session')">
+        <span class="new-btn-glyph" aria-hidden="true">+</span> New
+      </button>
     </div>
 
     <div class="session-list">
-      <div v-if="sessions.length === 0" class="empty-state">No sessions yet</div>
+      <div v-if="sessions.length === 0" class="empty-state">
+        <span class="empty-glyph" aria-hidden="true">◴</span>
+        <span class="empty-title">No sessions yet</span>
+        <span class="empty-hint">Upload audio to start transcribing</span>
+      </div>
 
       <div
         v-else
@@ -118,16 +124,22 @@ function formatRelativeTime(timestamp: number): string {
 .mobile-toggle {
   display: none;
   position: fixed;
-  top: calc(var(--spacing-unit) * 1);
-  left: calc(var(--spacing-unit) * 1);
+  top: var(--spacing-unit);
+  left: var(--spacing-unit);
   z-index: 100;
-  background: var(--panel-bg);
+  background: var(--sticky-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: calc(var(--spacing-unit) * 0.5);
-  font-size: 1.2rem;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
   cursor: pointer;
   color: var(--text-color);
+  box-shadow: var(--shadow-md);
 }
 
 .sidebar-backdrop {
@@ -135,7 +147,7 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 .sidebar {
-  width: 260px;
+  width: 264px;
   height: 100vh;
   position: sticky;
   top: 0;
@@ -144,60 +156,119 @@ function formatRelativeTime(timestamp: number): string {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  transition: transform 0.2s ease;
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-header {
-  padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 1);
+  padding: calc(var(--spacing-unit) * 1.25) var(--spacing-unit);
   border-bottom: 1px solid var(--divider-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .app-title {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text-color);
 }
 
-.new-btn {
+.brand-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   background: var(--accent-color);
-  color: white;
+  box-shadow: 0 0 0 4px var(--accent-light);
+}
+
+.new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent-color);
+  color: var(--accent-contrast);
   border: none;
-  border-radius: var(--radius);
-  padding: calc(var(--spacing-unit) * 0.5) calc(var(--spacing-unit) * 1);
-  font-weight: bold;
+  border-radius: var(--radius-pill);
+  padding: 7px 14px 7px 11px;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease;
 }
 
 .new-btn:hover {
-  opacity: 0.9;
+  background: var(--accent-strong);
+}
+
+.new-btn:active {
+  transform: translateY(1px);
+}
+
+.new-btn-glyph {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 500;
 }
 
 .session-list {
   flex: 1;
   overflow-y: auto;
-  padding: calc(var(--spacing-unit) * 0.5) 0;
+  padding: calc(var(--spacing-unit) * 0.5) 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
   text-align: center;
   color: var(--secondary-text);
-  padding: calc(var(--spacing-unit) * 2);
-  font-size: 0.9rem;
+  padding: calc(var(--spacing-unit) * 2.5) var(--spacing-unit);
+}
+
+.empty-glyph {
+  font-size: 1.6rem;
+  opacity: 0.55;
+  margin-bottom: 2px;
+}
+
+.empty-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.empty-hint {
+  font-size: 0.78rem;
+  opacity: 0.8;
+  max-width: 18ch;
+  line-height: 1.45;
 }
 
 .session-item {
-  padding: calc(var(--spacing-unit) * 1);
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   cursor: pointer;
-  transition: background 0.15s ease;
-  border-left: 3px solid transparent;
+  position: relative;
+  transition:
+    background 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
 .session-item:hover {
@@ -205,8 +276,19 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 .session-item.is-active {
-  background: var(--hover-bg);
-  border-left-color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+.session-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  background: var(--accent-color);
 }
 
 .session-info {
@@ -215,45 +297,67 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 .session-name {
-  font-weight: 500;
+  font-weight: 550;
+  font-size: 0.88rem;
   color: var(--text-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: calc(var(--spacing-unit) * 0.25);
+  margin-bottom: 3px;
+}
+
+.session-item.is-active .session-name {
+  color: var(--accent-strong);
 }
 
 .session-meta {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   color: var(--secondary-text);
   display: flex;
-  gap: calc(var(--spacing-unit) * 0.5);
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .delete-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   background: transparent;
   border: none;
-  color: var(--error-color);
-  font-size: 1.2rem;
+  border-radius: var(--radius-sm);
+  color: var(--secondary-text);
+  font-size: 1.15rem;
+  line-height: 1;
   cursor: pointer;
-  padding: 0 calc(var(--spacing-unit) * 0.25);
   opacity: 0;
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    opacity 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
-.session-item:hover .delete-btn {
+.session-item:hover .delete-btn,
+.session-item:focus-within .delete-btn {
   opacity: 1;
 }
 
 .delete-btn:hover {
-  transform: scale(1.1);
+  background: var(--error-bg);
+  color: var(--error-color);
+}
+
+.session-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
 }
 
 @media (max-width: 600px) {
   .mobile-toggle {
-    display: block;
+    display: flex;
   }
 
   .sidebar {
@@ -262,6 +366,7 @@ function formatRelativeTime(timestamp: number): string {
     left: 0;
     z-index: 101;
     transform: translateX(-100%);
+    box-shadow: var(--shadow-md);
   }
 
   .sidebar.is-open {
@@ -272,7 +377,9 @@ function formatRelativeTime(timestamp: number): string {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     z-index: 100;
   }
 }

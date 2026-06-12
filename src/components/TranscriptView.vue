@@ -207,47 +207,65 @@ const handleContentClick = (e: MouseEvent) => {
 }
 
 .meta-info {
-  font-size: 13px;
+  font-size: 11.5px;
   color: var(--secondary-text);
-  margin-bottom: var(--spacing-unit);
+  margin-bottom: calc(var(--spacing-unit) * 1.25);
+  padding-bottom: calc(var(--spacing-unit) * 0.75);
+  border-bottom: 1px solid var(--divider-color);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .transcript-content {
   font-size: 18px;
-  line-height: 1.8;
+  line-height: 1.85;
+  max-width: 66ch;
   color: var(--text-color);
+  letter-spacing: -0.003em;
 }
 
 .transcript-content p {
-  margin-bottom: var(--spacing-unit);
+  margin-bottom: calc(var(--spacing-unit) * 1.25);
   position: relative;
 }
 
 .paragraph-timestamp {
-  display: inline-block;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--secondary-text);
-  font-weight: 500;
-  margin-right: 8px;
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  padding: 1px 9px;
+  margin-right: 9px;
+  vertical-align: 2px;
   user-select: none;
   cursor: pointer;
-  transition: color 0.15s ease;
+  font-variant-numeric: tabular-nums;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .paragraph-timestamp:hover {
-  color: var(--text-color);
+  color: var(--accent-strong);
+  background: var(--accent-light);
+  border-color: var(--accent-soft-border);
 }
 
 .word {
   cursor: pointer;
-  padding: 2px 0;
-  border-radius: 3px;
+  padding: 2px 1px;
+  border-radius: 4px;
   transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+    background-color 0.13s ease,
+    color 0.13s ease,
+    box-shadow 0.13s ease;
 }
 
 .word:hover {
@@ -257,12 +275,17 @@ const handleContentClick = (e: MouseEvent) => {
 
 .word.sentence-active {
   background-color: var(--accent-light);
+  box-shadow: 0 0 0 1px var(--accent-light);
 }
 
 .word.active {
   background-color: var(--accent-color);
-  color: var(--text-color);
-  box-shadow: 0 0 0 1px var(--accent-soft-border);
+  color: var(--accent-contrast);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.word.sentence-active.active {
+  box-shadow: 0 0 0 2px var(--accent-color);
 }
 
 @media (max-width: 600px) {

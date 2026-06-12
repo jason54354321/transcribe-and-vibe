@@ -180,14 +180,14 @@ function formatSize(dp: DownloadProgress) {
 <style scoped>
 .status-container {
   text-align: center;
-  margin: calc(var(--spacing-unit) * 3) 0;
+  margin: calc(var(--spacing-unit) * 2.5) 0;
 }
 
 .runtime-info {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: calc(var(--spacing-unit) * 0.75);
-  margin-bottom: var(--spacing-unit);
+  gap: 10px;
+  margin-bottom: calc(var(--spacing-unit) * 1.25);
   text-align: left;
 }
 
@@ -195,36 +195,43 @@ function formatSize(dp: DownloadProgress) {
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: calc(var(--spacing-unit) * 0.75);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .runtime-label {
-  font-size: 12px;
+  font-size: 10.5px;
   color: var(--secondary-text);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
+  font-weight: 700;
 }
 
 .runtime-value {
-  margin-top: 4px;
+  margin-top: 5px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .runtime-details {
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 5px;
+  font-size: 11.5px;
   color: var(--secondary-text);
-  font-family: monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: -0.01em;
 }
 
 .indeterminate-track {
   width: 100%;
-  max-width: 400px;
-  height: 4px;
-  background: var(--border-color);
-  border-radius: 2px;
-  margin: 0 auto 12px;
+  max-width: 360px;
+  height: 5px;
+  background: var(--divider-color);
+  border-radius: var(--radius-pill);
+  margin: 0 auto 14px;
   overflow: hidden;
   position: relative;
 }
@@ -232,10 +239,10 @@ function formatSize(dp: DownloadProgress) {
 .indeterminate-bar {
   position: absolute;
   height: 100%;
-  width: 30%;
-  background: var(--accent-color);
-  border-radius: 2px;
-  animation: slide 1.5s ease-in-out infinite;
+  width: 32%;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-strong));
+  border-radius: var(--radius-pill);
+  animation: slide 1.4s ease-in-out infinite;
 }
 
 @keyframes slide {
@@ -252,24 +259,25 @@ function formatSize(dp: DownloadProgress) {
 
 .determinate-track {
   width: 100%;
-  max-width: 400px;
-  height: 4px;
-  background: var(--border-color);
-  border-radius: 2px;
-  margin: 0 auto 12px;
+  max-width: 360px;
+  height: 5px;
+  background: var(--divider-color);
+  border-radius: var(--radius-pill);
+  margin: 0 auto 14px;
   overflow: hidden;
 }
 
 .determinate-bar {
   height: 100%;
-  background: var(--accent-color);
-  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-strong));
+  border-radius: var(--radius-pill);
   transition: width 0.5s ease;
 }
 
 .status-text {
-  color: var(--secondary-text);
+  color: var(--text-color);
   font-size: 14px;
+  font-weight: 550;
 }
 
 .progress-info {
@@ -311,23 +319,24 @@ function formatSize(dp: DownloadProgress) {
   font-size: 12px;
   color: var(--secondary-text);
   margin-bottom: 6px;
-  font-family: monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-bar-track {
   width: 100%;
-  max-width: 400px;
+  max-width: 360px;
   height: 6px;
-  background: var(--border-color);
-  border-radius: 3px;
+  background: var(--divider-color);
+  border-radius: var(--radius-pill);
   margin: 0 auto;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--accent-color);
-  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-strong));
+  border-radius: var(--radius-pill);
   transition: width 0.3s ease;
 }
 

@@ -332,50 +332,85 @@ onMounted(async () => {
 <style>
 :root {
   --font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --bg-color: #ffffff;
-  --panel-bg: #f5f5f5;
-  --button-bg: #f5f5f5;
-  --button-hover-bg: #ebebeb;
-  --text-color: #1a1a1a;
-  --accent-color: #0b6fcc;
-  --accent-light: #e6f0fa;
-  --accent-soft: #d8e8f6;
-  --accent-soft-border: #b7d1ea;
-  --border-color: #e5e5e5;
-  --divider-color: #d9d9d9;
-  --secondary-text: #666666;
-  --error-color: #d93025;
-  --error-bg: #fce8e6;
-  --warning-color: #8a6d00;
-  --warning-bg: #fef7e0;
-  --success-color: #188038;
-  --radius: 8px;
+
+  /* Surface layering */
+  --bg-color: #fbfbfa;
+  --panel-bg: #ffffff;
+  --panel-raised: #ffffff;
+  --button-bg: #f4f4f2;
+  --button-hover-bg: #ebebe8;
+  --text-color: #19191a;
+  --hover-bg: #f1f1ef;
+
+  /* Accent (indigo) */
+  --accent-color: #4f46e5;
+  --accent-strong: #4338ca;
+  --accent-light: #eef0fe;
+  --accent-soft: #e0e3fc;
+  --accent-soft-border: #c3c8fa;
+  --accent-contrast: #ffffff;
+
+  /* Lines */
+  --border-color: #e7e7e3;
+  --divider-color: #ececea;
+  --secondary-text: #6b6b6b;
+
+  /* Semantic */
+  --error-color: #c2342a;
+  --error-bg: #fcecea;
+  --error-border: #f3c9c4;
+  --warning-color: #8a6300;
+  --warning-bg: #fdf3df;
+  --warning-border: #f0dca8;
+  --success-color: #15803d;
+
+  /* Scales */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
   --spacing-unit: 16px;
-  --hover-bg: #f0f0f0;
-  --sticky-bg: rgba(255, 255, 255, 0.95);
+
+  --shadow-sm: 0 1px 2px rgba(17, 17, 19, 0.05), 0 1px 1px rgba(17, 17, 19, 0.04);
+  --shadow-md: 0 4px 16px rgba(17, 17, 19, 0.08), 0 1px 3px rgba(17, 17, 19, 0.05);
+
+  --sticky-bg: rgba(251, 251, 250, 0.82);
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg-color: #181a1b;
-  --panel-bg: #1e2021;
+
+  --bg-color: #161819;
+  --panel-bg: #1d2021;
+  --panel-raised: #24282a;
   --button-bg: #2b2f31;
-  --button-hover-bg: #32373a;
+  --button-hover-bg: #353a3d;
   --text-color: #d8d4cf;
-  --accent-color: #0b6fcc;
-  --accent-light: #1f425e;
-  --accent-soft: #1f3447;
-  --accent-soft-border: #34506b;
-  --border-color: #545b5e;
-  --divider-color: #3a3f42;
-  --secondary-text: #b2aba1;
-  --error-color: #ff7b72;
-  --error-bg: #3a1d1d;
-  --warning-color: #e0b15a;
-  --warning-bg: #3a2f1b;
+  --hover-bg: #26292b;
+
+  --accent-color: #7c8cff;
+  --accent-strong: #93a0ff;
+  --accent-light: #232843;
+  --accent-soft: #2b3154;
+  --accent-soft-border: #3c4574;
+  --accent-contrast: #11131f;
+
+  --border-color: #353a3d;
+  --divider-color: #2c3032;
+  --secondary-text: #9b958c;
+
+  --error-color: #ff8b82;
+  --error-bg: #371f1e;
+  --error-border: #5a3330;
+  --warning-color: #e6b865;
+  --warning-bg: #34291a;
+  --warning-border: #574629;
   --success-color: #7ccf8a;
-  --hover-bg: #232628;
-  --sticky-bg: rgba(24, 26, 27, 0.95);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 22px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  --sticky-bg: rgba(22, 24, 25, 0.78);
 }
 
 * {
@@ -390,6 +425,7 @@ body {
   color: var(--text-color);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .app-layout {
@@ -400,81 +436,187 @@ body {
 .main-content {
   flex: 1;
   min-width: 0;
-  padding: calc(var(--spacing-unit) * 2);
+  padding: calc(var(--spacing-unit) * 2.5) calc(var(--spacing-unit) * 2);
 }
 
 .container {
-  max-width: 800px;
+  max-width: 760px;
   margin: 0 auto;
-  padding-bottom: 100px;
+  padding-bottom: 120px;
 }
 
 header {
-  margin-bottom: calc(var(--spacing-unit) * 3);
+  margin-bottom: calc(var(--spacing-unit) * 2.5);
   text-align: center;
 }
 
 h1 {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
+  font-size: 26px;
+  font-weight: 650;
+  margin-bottom: 6px;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .subtitle {
   color: var(--secondary-text);
   font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+.warning-banner,
+.error-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  margin-bottom: var(--spacing-unit);
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.5;
+  box-shadow: var(--shadow-sm);
 }
 
 .warning-banner {
   background-color: var(--warning-bg);
   color: var(--warning-color);
-  padding: var(--spacing-unit);
-  border-radius: var(--radius);
-  margin-bottom: var(--spacing-unit);
-  text-align: center;
-  font-size: 14px;
+  border-color: var(--warning-border);
 }
 
 .error-container {
   background-color: var(--error-bg);
   color: var(--error-color);
-  padding: var(--spacing-unit);
-  border-radius: var(--radius);
-  margin-bottom: var(--spacing-unit);
-  text-align: center;
+  border-color: var(--error-border);
+}
+
+.warning-banner::before,
+.error-container::before {
+  flex: none;
   font-size: 14px;
+  line-height: 1.45;
+}
+
+.warning-banner::before {
+  content: '⚠';
+}
+
+.error-container::before {
+  content: '⊘';
 }
 
 .transcription-meta {
   color: var(--secondary-text);
   font-size: 13px;
   margin-bottom: calc(var(--spacing-unit) / 2);
+  font-variant-numeric: tabular-nums;
 }
 
 .option-toggles {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: calc(var(--spacing-unit) * 1.5);
-  margin-top: 8px;
+  gap: 10px 20px;
+  margin-top: 14px;
 }
 
 .toggle-label {
-  display: flex;
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 13px;
   color: var(--secondary-text);
   cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.toggle-label:hover {
+  color: var(--text-color);
+}
+
+/*
+  Switch-style toggle: the real checkbox stays interactive and fully clickable,
+  sized to cover the switch track. We hide its native appearance but keep it
+  on top (z-index + pointer-events) so .check()/.click() always hit the input.
+  The track + knob are painted on a sibling <span> via ::before/::after.
+*/
+.toggle-label > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 38px;
+}
+
+.toggle-label > span::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.toggle-label > span::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--secondary-text);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1),
+    background 0.18s ease;
 }
 
 .toggle-label input[type='checkbox'] {
+  position: absolute;
+  left: 0;
+  width: 32px;
+  height: 20px;
+  margin: 0;
+  opacity: 0;
   cursor: pointer;
-  accent-color: var(--accent-color);
+  z-index: 1;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.toggle-label input[type='checkbox']:checked + span::before {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.toggle-label input[type='checkbox']:checked + span::after {
+  transform: translate(12px, -50%);
+  background: var(--accent-contrast);
+}
+
+.toggle-label input[type='checkbox']:focus-visible + span::before {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .toggle-label input[type='checkbox']:disabled {
   cursor: not-allowed;
+}
+
+.toggle-label input[type='checkbox']:disabled + span {
+  opacity: 0.5;
 }
 
 @media (max-width: 600px) {
@@ -493,36 +635,46 @@ h1 {
 
 .keyboard-hints {
   position: fixed;
-  bottom: calc(var(--spacing-unit) * 0.75);
-  right: calc(var(--spacing-unit) * 0.75);
+  bottom: var(--spacing-unit);
+  right: var(--spacing-unit);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 11px;
+  gap: 7px;
+  padding: 7px 13px;
+  font-size: 11.5px;
   color: var(--secondary-text);
-  background: var(--panel-bg);
+  background: var(--sticky-bg);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  opacity: 0.7;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  opacity: 0.92;
   pointer-events: none;
   z-index: 100;
 }
 
 .keyboard-hints kbd {
   display: inline-block;
-  padding: 1px 5px;
+  padding: 2px 6px;
   font-family: inherit;
   font-size: 10px;
-  line-height: 1.4;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--text-color);
   background: var(--button-bg);
   border: 1px solid var(--border-color);
-  border-radius: 3px;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+.keyboard-hints kbd + kbd {
+  margin-left: 2px;
 }
 
 .keyboard-hints .hint-sep {
   color: var(--border-color);
+  font-weight: 700;
 }
 
 .hints-fade-enter-active,
@@ -533,5 +685,22 @@ h1 {
 .hints-fade-enter-from,
 .hints-fade-leave-to {
   opacity: 0;
+}
+
+:where(a, button, input, select, [role='button'], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 </style>
