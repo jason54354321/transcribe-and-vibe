@@ -266,6 +266,7 @@ onMounted(async () => {
           :chunks="displayedResult?.chunks || []"
           :currentTimeMs="audioPlayerRef?.currentTimeMs || 0"
           :is-highlight-enabled="isHighlightEnabled"
+          :is-playing="audioPlayerRef?.isPlaying || false"
           @seek="onSeek"
         />
       </div>

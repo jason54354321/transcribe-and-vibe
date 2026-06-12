@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, ref } from 'vue'
+import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
 
 type Chunk = { text: string; timestamp: [number | null, number | null] }
 
@@ -7,6 +7,7 @@ const props = defineProps<{
   chunks: Chunk[]
   currentTimeMs: number
   isHighlightEnabled: boolean
+  isPlaying?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -90,6 +91,35 @@ const paragraphOffsets = computed(() => {
 })
 
 const activeIndex = ref(-1)
+const contentRef = ref<HTMLElement | null>(null)
+
+// User scroll temporarily disables auto-scroll so it never fights manual reading.
+// Only genuine user gestures (wheel/touch) suspend it — programmatic scrollIntoView does not.
+let suspendUntil = 0
+const SUSPEND_MS = 2000
+
+const onUserScroll = () => {
+  suspendUntil = performance.now() + SUSPEND_MS
+}
+
+onMounted(() => {
+  window.addEventListener('wheel', onUserScroll, { passive: true })
+  window.addEventListener('touchmove', onUserScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('wheel', onUserScroll)
+  window.removeEventListener('touchmove', onUserScroll)
+})
+
+watch(activeIndex, async (index) => {
+  if (index < 0 || !props.isPlaying || !props.isHighlightEnabled) return
+  if (performance.now() < suspendUntil) return
+
+  await nextTick()
+  const active = contentRef.value?.querySelector('.word.active')
+  active?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+})
 
 watch(
   () => props.currentTimeMs,
@@ -137,7 +167,12 @@ const handleContentClick = (e: MouseEvent) => {
 <template>
   <div id="transcript-container" class="transcript-container">
     <div id="meta-info" class="meta-info">{{ metaInfoText }}</div>
-    <div id="transcript-content" class="transcript-content" @click="handleContentClick">
+    <div
+      id="transcript-content"
+      ref="contentRef"
+      class="transcript-content"
+      @click="handleContentClick"
+    >
       <p v-for="(para, pIndex) in paragraphs" :key="pIndex">
         <span v-if="para.length > 0" class="paragraph-timestamp" :data-start="para[0].start">{{
           formatTime(para[0].startSec)

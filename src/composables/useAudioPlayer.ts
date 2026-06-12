@@ -4,6 +4,7 @@ export function useAudioPlayer() {
   const audioRef = ref<HTMLAudioElement | null>(null)
   const currentTimeMs = ref(0)
   const volume = ref(1)
+  const isPlaying = ref(false)
 
   const updateTime = () => {
     if (audioRef.value) {
@@ -17,15 +18,28 @@ export function useAudioPlayer() {
     }
   }
 
+  const syncPlayState = () => {
+    if (audioRef.value) {
+      isPlaying.value = !audioRef.value.paused
+    }
+  }
+
   watchEffect((onCleanup) => {
     const el = audioRef.value
     if (el) {
       el.addEventListener('timeupdate', updateTime)
       el.addEventListener('volumechange', syncVolume)
+      el.addEventListener('play', syncPlayState)
+      el.addEventListener('pause', syncPlayState)
+      el.addEventListener('ended', syncPlayState)
       volume.value = Math.round(el.volume * 100) / 100
+      isPlaying.value = !el.paused
       onCleanup(() => {
         el.removeEventListener('timeupdate', updateTime)
         el.removeEventListener('volumechange', syncVolume)
+        el.removeEventListener('play', syncPlayState)
+        el.removeEventListener('pause', syncPlayState)
+        el.removeEventListener('ended', syncPlayState)
       })
     }
   })
@@ -77,6 +91,7 @@ export function useAudioPlayer() {
     audioRef,
     currentTimeMs,
     volume,
+    isPlaying,
     setSource,
     seekTo,
     togglePlay,

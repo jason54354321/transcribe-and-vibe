@@ -6,7 +6,8 @@ const props = defineProps<{
   src: string
 }>()
 
-const { audioRef, currentTimeMs, volume, seekTo, togglePlay, skip, adjustVolume } = useAudioPlayer()
+const { audioRef, currentTimeMs, volume, isPlaying, seekTo, togglePlay, skip, adjustVolume } =
+  useAudioPlayer()
 
 watchEffect(() => {
   if (props.src && audioRef.value) {
@@ -33,6 +34,7 @@ const exposedAdjustVolume = (delta: number) => {
 defineExpose({
   currentTimeMs,
   volume,
+  isPlaying,
   seekTo,
   togglePlay,
   skip,
