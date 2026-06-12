@@ -60,6 +60,18 @@ export function useAudioPlayer() {
     }
   }
 
+  const play = () => {
+    const el = audioRef.value
+    if (!el) return
+    el.play().catch(() => {
+      // Ignore play interruption errors
+    })
+  }
+
+  const pause = () => {
+    audioRef.value?.pause()
+  }
+
   const togglePlay = () => {
     const el = audioRef.value
     if (!el) return
@@ -94,6 +106,8 @@ export function useAudioPlayer() {
     isPlaying,
     setSource,
     seekTo,
+    play,
+    pause,
     togglePlay,
     skip,
     adjustVolume,

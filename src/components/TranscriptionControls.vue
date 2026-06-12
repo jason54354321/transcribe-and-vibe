@@ -14,11 +14,13 @@ const props = defineProps<{
   isProcessing: boolean
   visibleModelOptions: ModelOption[]
   isHighlightEnabled: boolean
+  isLearningEnabled: boolean
 }>()
 
 const emit = defineEmits<{
   'update:modelId': [value: string]
   'update:isHighlightEnabled': [value: boolean]
+  'update:isLearningEnabled': [value: boolean]
   toggleTheme: []
 }>()
 </script>
@@ -51,6 +53,15 @@ const emit = defineEmits<{
           @change="emit('update:isHighlightEnabled', ($event.target as HTMLInputElement).checked)"
         />
         <span>Word highlight</span>
+      </label>
+      <label class="toggle-label">
+        <input
+          id="learning-toggle"
+          type="checkbox"
+          :checked="props.isLearningEnabled"
+          @change="emit('update:isLearningEnabled', ($event.target as HTMLInputElement).checked)"
+        />
+        <span>Learning mode</span>
       </label>
     </div>
   </header>

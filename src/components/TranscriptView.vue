@@ -8,6 +8,8 @@ const props = defineProps<{
   currentTimeMs: number
   isHighlightEnabled: boolean
   isPlaying?: boolean
+  isLearningEnabled?: boolean
+  activeSentenceRange?: { startWordIndex: number; endWordIndex: number } | null
 }>()
 
 const emit = defineEmits<{
@@ -183,6 +185,11 @@ const handleContentClick = (e: MouseEvent) => {
           class="word"
           :class="{
             active: props.isHighlightEnabled && paragraphOffsets[pIndex] + wIndex === activeIndex,
+            'sentence-active':
+              props.isLearningEnabled &&
+              props.activeSentenceRange != null &&
+              paragraphOffsets[pIndex] + wIndex >= props.activeSentenceRange.startWordIndex &&
+              paragraphOffsets[pIndex] + wIndex <= props.activeSentenceRange.endWordIndex,
           }"
           :data-start="word.start"
           :data-end="word.end"
@@ -246,6 +253,10 @@ const handleContentClick = (e: MouseEvent) => {
 .word:hover {
   background-color: var(--hover-bg);
   color: var(--text-color);
+}
+
+.word.sentence-active {
+  background-color: var(--accent-light);
 }
 
 .word.active {

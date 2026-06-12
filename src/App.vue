@@ -9,6 +9,7 @@ import TranscriptionControls from './components/TranscriptionControls.vue'
 import type { TranscribeResult } from './types/transcriber'
 import { useFileUpload } from './composables/useFileUpload'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
+import { useEnglishLearningMode } from './composables/useEnglishLearningMode'
 import { VALID_TYPES, MAX_FILE_SIZE } from './composables/useFileUpload'
 import { useTheme } from './composables/useTheme'
 import { useStickyAudio } from './composables/useStickyAudio'
@@ -46,6 +47,7 @@ const { handleFile } = useFileUpload()
 const { currentTheme, toggleTheme, initializeTheme } = useTheme()
 const { audioUrl, isAudioStuck, hasAudioSource, revokeAudioUrl } = useStickyAudio()
 const isHighlightEnabled = ref(true)
+const isLearningEnabled = ref(false)
 
 const initializeHighlight = () => {
   const saved = localStorage.getItem('vibe-highlight')
@@ -54,8 +56,19 @@ const initializeHighlight = () => {
   }
 }
 
+const initializeLearning = () => {
+  const saved = localStorage.getItem('vibe-learning')
+  if (saved !== null) {
+    isLearningEnabled.value = saved === 'true'
+  }
+}
+
 watch(isHighlightEnabled, (enabled) => {
   localStorage.setItem('vibe-highlight', String(enabled))
+})
+
+watch(isLearningEnabled, (enabled) => {
+  localStorage.setItem('vibe-learning', String(enabled))
 })
 
 const displayedResult = ref<TranscribeResult | null>(null)
@@ -87,13 +100,34 @@ const {
 const audioPlayerRef = ref<InstanceType<typeof AudioPlayer> | null>(null)
 const appError = ref<string | null>(null)
 
+const learning = useEnglishLearningMode({
+  chunks: computed(() => displayedResult.value?.chunks ?? []),
+  currentTimeMs: computed(() => audioPlayerRef.value?.currentTimeMs ?? 0),
+  isPlaying: computed(() => audioPlayerRef.value?.isPlaying ?? false),
+  isEnabled: isLearningEnabled,
+  seekTo: (ms) => audioPlayerRef.value?.seekTo(ms),
+  pause: () => audioPlayerRef.value?.pause(),
+})
+
+const activeSentenceRange = computed(() => {
+  const index = learning.currentSentenceIndex.value
+  if (index < 0) return null
+  const sentence = learning.sentences.value[index]
+  if (!sentence) return null
+  return { startWordIndex: sentence.startWordIndex, endWordIndex: sentence.endWordIndex }
+})
+
 useKeyboardShortcuts(
   {
     togglePlay: () => audioPlayerRef.value?.togglePlay(),
     skip: (d) => audioPlayerRef.value?.skip(d),
     adjustVolume: (d) => audioPlayerRef.value?.adjustVolume(d),
+    prevSentence: () => learning.prevSentence(),
+    nextSentence: () => learning.nextSentence(),
+    replaySentence: () => learning.replaySentence(),
   },
   hasAudioSource,
+  isLearningEnabled,
 )
 
 const showDropZone = computed(() => !isProcessing.value && !displayedResult.value)
@@ -181,6 +215,7 @@ const onSeek = (ms: number) => {
 onMounted(async () => {
   initializeTheme()
   initializeHighlight()
+  initializeLearning()
 
   try {
     await initializeSessions()
@@ -215,8 +250,10 @@ onMounted(async () => {
           :is-processing="isProcessing"
           :visible-model-options="visibleModelOptions"
           :is-highlight-enabled="isHighlightEnabled"
+          :is-learning-enabled="isLearningEnabled"
           @update:model-id="selectedModel = $event"
           @update:is-highlight-enabled="isHighlightEnabled = $event"
+          @update:is-learning-enabled="isLearningEnabled = $event"
           @toggle-theme="toggleTheme"
         />
 
@@ -267,6 +304,8 @@ onMounted(async () => {
           :currentTimeMs="audioPlayerRef?.currentTimeMs || 0"
           :is-highlight-enabled="isHighlightEnabled"
           :is-playing="audioPlayerRef?.isPlaying || false"
+          :is-learning-enabled="isLearningEnabled"
+          :active-sentence-range="activeSentenceRange"
           @seek="onSeek"
         />
       </div>
@@ -279,6 +318,12 @@ onMounted(async () => {
         <kbd>←</kbd><kbd>→</kbd> ±5s
         <span class="hint-sep">·</span>
         <kbd>↑</kbd><kbd>↓</kbd> volume
+        <template v-if="isLearningEnabled">
+          <span class="hint-sep">·</span>
+          <kbd>A</kbd><kbd>D</kbd> prev/next sentence
+          <span class="hint-sep">·</span>
+          <kbd>S</kbd> replay
+        </template>
       </div>
     </Transition>
   </div>

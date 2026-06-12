@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import type { ComputedRef, Ref, WritableComputedRef } from 'vue'
+import type { Ref } from 'vue'
 import { deleteSession, listSessions, loadSessionData, saveSession } from './useSessionStore'
 import type { Session } from './useSessionStore'
 import type { TranscribeResult } from '../types/transcriber'

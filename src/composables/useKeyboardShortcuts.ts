@@ -5,14 +5,38 @@ type AudioPlayerApi = {
   togglePlay: () => void
   skip: (deltaSec: number) => void
   adjustVolume: (delta: number) => void
+  prevSentence?: () => void
+  nextSentence?: () => void
+  replaySentence?: () => void
 }
 
 const INTERACTIVE_SELECTORS = 'input, textarea, select, button, [contenteditable]'
 
-export function useKeyboardShortcuts(api: AudioPlayerApi, hasSource: Ref<boolean>) {
+export function useKeyboardShortcuts(
+  api: AudioPlayerApi,
+  hasSource: Ref<boolean>,
+  isLearningMode?: Ref<boolean>,
+) {
   const handleKeydown = (e: KeyboardEvent) => {
     if (!hasSource.value) return
     if (document.activeElement?.matches(INTERACTIVE_SELECTORS)) return
+
+    if (isLearningMode?.value) {
+      switch (e.code) {
+        case 'KeyA':
+          e.preventDefault()
+          api.prevSentence?.()
+          return
+        case 'KeyD':
+          e.preventDefault()
+          api.nextSentence?.()
+          return
+        case 'KeyS':
+          e.preventDefault()
+          api.replaySentence?.()
+          return
+      }
+    }
 
     switch (e.code) {
       case 'Space':
