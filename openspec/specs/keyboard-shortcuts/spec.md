@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define the canonical requirements for global keyboard shortcuts that control audio playback from anywhere on the page, including play/pause, seeking, and volume adjustment, while respecting focus on interactive form elements.
+
+## Requirements
 
 ### Requirement: Space bar toggles play/pause
 The system SHALL toggle audio playback (play ↔ pause) when the user presses the Space bar, provided the audio source is loaded and focus is not on an interactive form element (`<input>`, `<textarea>`, `<select>`, `<button>`, or `[contenteditable]`). The system SHALL call `preventDefault()` to suppress page scrolling.

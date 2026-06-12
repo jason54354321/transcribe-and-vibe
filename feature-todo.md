@@ -2,7 +2,7 @@
 
 - english learning mode
     - pause when sentences finish 
-    - left / right arrow -> prev/next sentence
-    - up / down -> prev/next paragraph
+    - a / d -> prev/next sentence
+    - s -> replay current sentence
 
-- store into db instead of web cache
+- store into sqlite db instead of web cache
