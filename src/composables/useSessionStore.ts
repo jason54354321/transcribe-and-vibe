@@ -1,9 +1,9 @@
-import { openDB } from 'idb'
-import type { DBSchema, IDBPDatabase } from 'idb'
 import type { TranscribeResult } from '../types/transcriber'
 import { createLogger } from '../utils/logger'
 
 const log = createLogger('SessionStore')
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api'
 
 export type Session = {
   id: string
@@ -13,88 +13,47 @@ export type Session = {
   transcriptionTimeSec?: number
 }
 
-interface VibeSessionDB extends DBSchema {
-  sessions: {
-    key: string
-    value: Session
-    indexes: { 'by-createdAt': number }
-  }
-  sessionBlobs: {
-    key: string
-    value: Blob
-  }
-  sessionTranscripts: {
-    key: string
-    value: TranscribeResult
-  }
-}
-
-const DB_NAME = 'vibe-sessions'
-const DB_VERSION = 1
-
-let dbPromise: Promise<IDBPDatabase<VibeSessionDB>> | null = null
-
-function getDB(): Promise<IDBPDatabase<VibeSessionDB>> {
-  if (!dbPromise) {
-    dbPromise = openDB<VibeSessionDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' })
-        sessionStore.createIndex('by-createdAt', 'createdAt')
-        db.createObjectStore('sessionBlobs')
-        db.createObjectStore('sessionTranscripts')
-      },
-    })
-  }
-  return dbPromise
-}
-
 export async function saveSession(
   session: Session,
   audioBlob: Blob,
   transcript: TranscribeResult,
 ): Promise<void> {
   log.info(`Saving session ${session.id} "${session.name}"`)
-  const db = await getDB()
-  // Deep-clone transcript to strip Vue reactive proxies (not structured-clonable)
   const plainTranscript: TranscribeResult = JSON.parse(JSON.stringify(transcript))
-  const tx = db.transaction(['sessions', 'sessionBlobs', 'sessionTranscripts'], 'readwrite')
-  await Promise.all([
-    tx.objectStore('sessions').put(session),
-    tx.objectStore('sessionBlobs').put(audioBlob, session.id),
-    tx.objectStore('sessionTranscripts').put(plainTranscript, session.id),
-    tx.done,
-  ])
+  const form = new FormData()
+  form.append('audio', audioBlob)
+  form.append('id', session.id)
+  form.append('name', session.name)
+  form.append('duration_sec', String(session.durationSec))
+  form.append('transcript', JSON.stringify(plainTranscript))
+  if (session.transcriptionTimeSec != null) {
+    form.append('transcription_time_sec', String(session.transcriptionTimeSec))
+  }
+
+  const res = await fetch(`${API_BASE}/sessions`, { method: 'POST', body: form })
+  if (!res.ok) throw new Error(`Failed to save session ${session.id}: ${res.status}`)
   log.info(`Session saved ${session.id}`)
 }
 
 export async function listSessions(): Promise<Session[]> {
-  const db = await getDB()
-  const sessions = await db.getAllFromIndex('sessions', 'by-createdAt')
-  return sessions.reverse()
+  const res = await fetch(`${API_BASE}/sessions`)
+  if (!res.ok) throw new Error(`Failed to list sessions: ${res.status}`)
+  return (await res.json()) as Session[]
 }
 
 export async function loadSessionData(
   id: string,
-): Promise<{ audioBlob: Blob; transcript: TranscribeResult } | null> {
+): Promise<{ audioUrl: string; transcript: TranscribeResult } | null> {
   log.info(`Loading session ${id}`)
-  const db = await getDB()
-  const tx = db.transaction(['sessionBlobs', 'sessionTranscripts'], 'readonly')
-  const [audioBlob, transcript] = await Promise.all([
-    tx.objectStore('sessionBlobs').get(id),
-    tx.objectStore('sessionTranscripts').get(id),
-  ])
-  if (!audioBlob || !transcript) return null
-  return { audioBlob, transcript }
+  const res = await fetch(`${API_BASE}/sessions/${id}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Failed to load session ${id}: ${res.status}`)
+  const data = (await res.json()) as { session: Session; transcript: TranscribeResult }
+  return { audioUrl: `${API_BASE}/sessions/${id}/audio`, transcript: data.transcript }
 }
 
 export async function deleteSession(id: string): Promise<void> {
   log.info(`Deleting session ${id}`)
-  const db = await getDB()
-  const tx = db.transaction(['sessions', 'sessionBlobs', 'sessionTranscripts'], 'readwrite')
-  await Promise.all([
-    tx.objectStore('sessions').delete(id),
-    tx.objectStore('sessionBlobs').delete(id),
-    tx.objectStore('sessionTranscripts').delete(id),
-    tx.done,
-  ])
+  const res = await fetch(`${API_BASE}/sessions/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Failed to delete session ${id}: ${res.status}`)
 }

@@ -107,8 +107,8 @@ export function useSessionOrchestration(args: SessionOrchestrationArgs) {
     activeSessionId.value = id
     args.displayedResult.value = data.transcript
     viewedTranscript.value = data.transcript
-    args.audioUrl.value = URL.createObjectURL(data.audioBlob)
-    audioBlob.value = data.audioBlob
+    args.audioUrl.value = data.audioUrl
+    audioBlob.value = null
     fileName.value = session?.name ?? ''
     durationSec.value = session?.durationSec ?? 0
     displayTranscriptionTime.value = session?.transcriptionTimeSec ?? null

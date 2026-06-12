@@ -105,10 +105,97 @@ function getMockBackendScript(options?: MockBackendOptions) {
       return 'event: ' + event + '\\ndata: ' + JSON.stringify(data) + '\\n\\n';
     }
 
+    const SESSIONS_KEY = '__vibe_mock_sessions';
+
+    function readSessions() {
+      try {
+        return JSON.parse(window.localStorage.getItem(SESSIONS_KEY) || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function writeSessions(map) {
+      window.localStorage.setItem(SESSIONS_KEY, JSON.stringify(map));
+    }
+
+    function jsonResponse(body, status) {
+      return new Response(JSON.stringify(body), {
+        status: status || 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const originalFetch = window.fetch.bind(window);
     window.fetch = async function(input, init) {
       const urlValue = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
       const url = new URL(urlValue, window.location.origin);
+      const method = ((init && init.method) || (input instanceof Request ? input.method : 'GET') || 'GET').toUpperCase();
+
+      const sessionAudioMatch = url.pathname.match(/\\/api\\/sessions\\/([^/]+)\\/audio$/);
+      if (sessionAudioMatch) {
+        return new Response(new Blob(['mock-audio'], { type: 'audio/mp4' }), {
+          status: 200,
+          headers: { 'Content-Type': 'audio/mp4' },
+        });
+      }
+
+      const sessionIdMatch = url.pathname.match(/\\/api\\/sessions\\/([^/]+)$/);
+      if (sessionIdMatch) {
+        const id = sessionIdMatch[1];
+        const map = readSessions();
+        if (method === 'DELETE') {
+          delete map[id];
+          writeSessions(map);
+          return jsonResponse({ ok: true });
+        }
+        const record = map[id];
+        if (!record) return jsonResponse({ detail: 'Session not found' }, 404);
+        return jsonResponse({
+          session: {
+            id,
+            name: record.name,
+            createdAt: record.createdAt,
+            durationSec: record.durationSec,
+            transcriptionTimeSec: record.transcriptionTimeSec ?? null,
+          },
+          transcript: record.transcript,
+        });
+      }
+
+      if (url.pathname.endsWith('/api/sessions')) {
+        if (method === 'POST') {
+          const form = (init && init.body) instanceof FormData ? init.body : null;
+          const map = readSessions();
+          const existing = Object.values(map).map((r) => r.createdAt);
+          const nextCreatedAt = existing.length > 0 ? Math.max.apply(null, existing) + 1 : 1;
+          const id = form ? String(form.get('id')) : '';
+          const transcriptRaw = form ? form.get('transcript') : '{}';
+          const ttRaw = form ? form.get('transcription_time_sec') : null;
+          map[id] = {
+            id,
+            name: form ? String(form.get('name')) : '',
+            durationSec: form ? Number(form.get('duration_sec')) : 0,
+            transcriptionTimeSec: ttRaw != null ? Number(ttRaw) : null,
+            transcript: JSON.parse(String(transcriptRaw || '{}')),
+            createdAt: nextCreatedAt,
+            audio: 'mock',
+          };
+          writeSessions(map);
+          return jsonResponse({ ok: true, id: id });
+        }
+        const map = readSessions();
+        const list = Object.values(map)
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .map((r) => ({
+            id: r.id,
+            name: r.name,
+            createdAt: r.createdAt,
+            durationSec: r.durationSec,
+            transcriptionTimeSec: r.transcriptionTimeSec ?? null,
+          }));
+        return jsonResponse(list);
+      }
 
       if (url.pathname.endsWith('/api/info')) {
         return new Response(JSON.stringify(BACKEND_INFO), {
@@ -213,6 +300,21 @@ export async function setupUnavailableBackend(page: Page) {
       }
       if (url.pathname.endsWith('/api/transcribe')) {
         return new Response('Backend unavailable', { status: 503 });
+      }
+      if (url.pathname.match(/\\/api\\/sessions\\/[^/]+\\/audio$/)) {
+        return new Response(new Blob([''], { type: 'audio/mp4' }), { status: 200 });
+      }
+      if (url.pathname.match(/\\/api\\/sessions\\/[^/]+$/)) {
+        return new Response(JSON.stringify({ detail: 'Session not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (url.pathname.endsWith('/api/sessions')) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
       return originalFetch(input, init);
     };

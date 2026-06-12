@@ -7,7 +7,9 @@ export function useStickyAudio() {
 
   const revokeAudioUrl = () => {
     if (audioUrl.value) {
-      URL.revokeObjectURL(audioUrl.value)
+      if (audioUrl.value.startsWith('blob:')) {
+        URL.revokeObjectURL(audioUrl.value)
+      }
       audioUrl.value = ''
     }
   }

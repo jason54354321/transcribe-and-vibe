@@ -9,14 +9,16 @@ import os
 import queue
 import tempfile
 import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File, Query, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+import storage
 from engine import TranscriptionEngine
 from engine.hardware import HardwareInfo, detect_hardware
 from engine.factory import create_engine
@@ -56,6 +58,8 @@ async def lifespan(app: FastAPI):
     engine = create_engine(hardware)
     default_model_id = get_default_model(hardware.device_type != 'cpu')
     logger.info(f'Default model: {default_model_id}')
+
+    storage.init_db()
 
     yield
 
@@ -188,6 +192,65 @@ async def transcribe(
             'X-Accel-Buffering': 'no',
         },
     )
+
+
+@app.post('/api/sessions')
+async def create_session(
+    audio: UploadFile = File(...),
+    id: str = Form(...),
+    name: str = Form(...),
+    duration_sec: float = Form(...),
+    transcript: str = Form(...),
+    transcription_time_sec: float | None = Form(None),
+):
+    content = await audio.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, detail='File exceeds 100MB limit')
+
+    try:
+        transcript_data = json.loads(transcript)
+    except json.JSONDecodeError as e:
+        raise HTTPException(400, detail=f'Invalid transcript JSON: {e}')
+
+    storage.save_session(
+        id=id,
+        name=name,
+        created_at=int(time.time() * 1000),
+        duration_sec=duration_sec,
+        transcription_time_sec=transcription_time_sec,
+        transcript=transcript_data,
+        audio=content,
+        audio_mime=audio.content_type or 'application/octet-stream',
+    )
+    return {'ok': True, 'id': id}
+
+
+@app.get('/api/sessions')
+async def get_sessions():
+    return storage.list_sessions()
+
+
+@app.get('/api/sessions/{session_id}')
+async def read_session(session_id: str):
+    session = storage.get_session(session_id)
+    if session is None:
+        raise HTTPException(404, detail='Session not found')
+    return session
+
+
+@app.get('/api/sessions/{session_id}/audio')
+async def read_session_audio(session_id: str):
+    result = storage.get_audio(session_id)
+    if result is None:
+        raise HTTPException(404, detail='Session audio not found')
+    audio_bytes, mime = result
+    return Response(content=audio_bytes, media_type=mime)
+
+
+@app.delete('/api/sessions/{session_id}')
+async def remove_session(session_id: str):
+    storage.delete_session(session_id)
+    return {'ok': True}
 
 
 # Serve frontend static files (vite build output) — must be LAST mount

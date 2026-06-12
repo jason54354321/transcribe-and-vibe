@@ -22,44 +22,24 @@ type SeedSessionArgs = {
 }
 
 async function seedSession(page: Page, args: SeedSessionArgs) {
-  await page.evaluate(async (payload) => {
-    await new Promise<void>((resolve, reject) => {
-      const request = window.indexedDB.open('vibe-sessions', 1)
-
-      request.onupgradeneeded = () => {
-        const db = request.result
-        if (!db.objectStoreNames.contains('sessions')) {
-          const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' })
-          sessionStore.createIndex('by-createdAt', 'createdAt')
-        }
-        if (!db.objectStoreNames.contains('sessionBlobs')) {
-          db.createObjectStore('sessionBlobs')
-        }
-        if (!db.objectStoreNames.contains('sessionTranscripts')) {
-          db.createObjectStore('sessionTranscripts')
-        }
-      }
-
-      request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB'))
-      request.onsuccess = () => {
-        const db = request.result
-        const tx = db.transaction(['sessions', 'sessionBlobs', 'sessionTranscripts'], 'readwrite')
-
-        tx.objectStore('sessions').put(payload.session)
-        tx.objectStore('sessionBlobs').put(
-          new Blob(['legacy-audio'], { type: 'audio/mp4' }),
-          payload.session.id,
-        )
-        tx.objectStore('sessionTranscripts').put(payload.transcript, payload.session.id)
-
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-        tx.onerror = () => reject(tx.error ?? new Error('Failed to seed session'))
-        tx.onabort = () => reject(tx.error ?? new Error('Failed to seed session'))
-      }
-    })
+  await page.evaluate((payload) => {
+    const key = '__vibe_mock_sessions'
+    let map: Record<string, unknown> = {}
+    try {
+      map = JSON.parse(window.localStorage.getItem(key) || '{}')
+    } catch {
+      map = {}
+    }
+    map[payload.session.id] = {
+      id: payload.session.id,
+      name: payload.session.name,
+      durationSec: payload.session.durationSec,
+      transcriptionTimeSec: payload.session.transcriptionTimeSec ?? null,
+      transcript: payload.transcript,
+      createdAt: payload.session.createdAt,
+      audio: 'mock',
+    }
+    window.localStorage.setItem(key, JSON.stringify(map))
   }, args)
 }
 
