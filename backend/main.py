@@ -13,7 +13,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, Form, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -239,12 +239,58 @@ async def read_session(session_id: str):
 
 
 @app.get('/api/sessions/{session_id}/audio')
-async def read_session_audio(session_id: str):
+async def read_session_audio(session_id: str, request: Request):
     result = storage.get_audio(session_id)
     if result is None:
         raise HTTPException(404, detail='Session audio not found')
     audio_bytes, mime = result
-    return Response(content=audio_bytes, media_type=mime)
+    total = len(audio_bytes)
+
+    range_header = request.headers.get('range')
+    if not range_header:
+        return Response(
+            content=audio_bytes,
+            media_type=mime,
+            headers={'Accept-Ranges': 'bytes', 'Content-Length': str(total)},
+        )
+
+    if not range_header.startswith('bytes='):
+        return Response(
+            content=audio_bytes,
+            media_type=mime,
+            headers={'Accept-Ranges': 'bytes', 'Content-Length': str(total)},
+        )
+
+    range_spec = range_header[len('bytes='):]
+    try:
+        start_str, _, end_str = range_spec.partition('-')
+        start = int(start_str) if start_str else 0
+        end = int(end_str) if end_str else total - 1
+    except ValueError:
+        return Response(
+            content=audio_bytes,
+            media_type=mime,
+            headers={'Accept-Ranges': 'bytes', 'Content-Length': str(total)},
+        )
+
+    if start >= total:
+        return Response(
+            status_code=416,
+            headers={'Content-Range': f'bytes */{total}'},
+        )
+
+    end = min(end, total - 1)
+    chunk = audio_bytes[start:end + 1]
+    return Response(
+        content=chunk,
+        status_code=206,
+        media_type=mime,
+        headers={
+            'Accept-Ranges': 'bytes',
+            'Content-Range': f'bytes {start}-{end}/{total}',
+            'Content-Length': str(len(chunk)),
+        },
+    )
 
 
 @app.delete('/api/sessions/{session_id}')

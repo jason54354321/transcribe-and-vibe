@@ -123,6 +123,32 @@ test.describe('Backend transcription', () => {
     expect(Math.abs(currentTimeSec * 1000 - expectedStartMs)).toBeLessThan(1000)
   })
 
+  test('click-to-seek works after loading a SAVED session', async ({ page }) => {
+    await gotoAndUpload(page)
+    await page.locator('#transcript-container').waitFor({ state: 'visible', timeout: 120_000 })
+
+    // Wait for the session to be persisted — the sidebar item appears once the backend saves it
+    await page.locator('.session-item').first().waitFor({ state: 'visible', timeout: 30_000 })
+
+    await page.reload()
+    await page.waitForTimeout(2000)
+
+    // Load the saved session; audio will now be served from /api/sessions/{id}/audio, not a blob: URL
+    await page.locator('.session-item').first().click()
+    await page.locator('#transcript-container').waitFor({ state: 'visible', timeout: 30_000 })
+
+    const words = page.locator('.word')
+    const midWord = words.nth(Math.floor((await words.count()) / 2))
+    const expectedStartMs = Number(await midWord.getAttribute('data-start'))
+
+    await midWord.click()
+    await page.waitForTimeout(500)
+
+    const audio = page.locator('audio')
+    const currentTimeSec = await audio.evaluate((el) => (el as HTMLAudioElement).currentTime)
+    expect(Math.abs(currentTimeSec * 1000 - expectedStartMs)).toBeLessThan(1000)
+  })
+
   test('blocking error when backend unreachable', async ({ page }) => {
     await page.route('**/api/info', (route) => route.abort())
     await page.goto('/')
