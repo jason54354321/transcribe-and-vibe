@@ -18,6 +18,8 @@ const emit = defineEmits<{
 
 type Word = {
   text: string
+  label: string
+  prefix: string
   start: number
   end: number
   startSec: number
@@ -46,6 +48,8 @@ const paragraphs = computed(() => {
 
     currentParagraph.push({
       text: chunk.text,
+      label: chunk.text.trimStart(),
+      prefix: chunk.text.match(/^(\s+)/)?.[1] ?? '',
       start: Math.round(startSec * 1000),
       end: Math.round(endSec * 1000),
       startSec,
@@ -179,22 +183,23 @@ const handleContentClick = (e: MouseEvent) => {
         <span v-if="para.length > 0" class="paragraph-timestamp" :data-start="para[0].start">{{
           formatTime(para[0].startSec)
         }}</span>
-        <span
-          v-for="(word, wIndex) in para"
-          :key="`${pIndex}-${wIndex}`"
-          class="word"
-          :class="{
-            active: props.isHighlightEnabled && paragraphOffsets[pIndex] + wIndex === activeIndex,
-            'sentence-active':
-              props.isLearningEnabled &&
-              props.activeSentenceRange != null &&
-              paragraphOffsets[pIndex] + wIndex >= props.activeSentenceRange.startWordIndex &&
-              paragraphOffsets[pIndex] + wIndex <= props.activeSentenceRange.endWordIndex,
-          }"
-          :data-start="word.start"
-          :data-end="word.end"
-          :title="`${formatTime(word.startSec)} - ${formatTime(word.endSec)}`"
-          >{{ word.text }}</span
+        <template v-for="(word, wIndex) in para" :key="`${pIndex}-${wIndex}`"
+          >{{ word.prefix
+          }}<span
+            class="word"
+            :class="{
+              active: props.isHighlightEnabled && paragraphOffsets[pIndex] + wIndex === activeIndex,
+              'sentence-active':
+                props.isLearningEnabled &&
+                props.activeSentenceRange != null &&
+                paragraphOffsets[pIndex] + wIndex >= props.activeSentenceRange.startWordIndex &&
+                paragraphOffsets[pIndex] + wIndex <= props.activeSentenceRange.endWordIndex,
+            }"
+            :data-start="word.start"
+            :data-end="word.end"
+            :title="`${formatTime(word.startSec)} - ${formatTime(word.endSec)}`"
+            >{{ word.label }}</span
+          ></template
         >
       </p>
     </div>

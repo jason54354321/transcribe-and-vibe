@@ -22,6 +22,7 @@ import storage
 from engine import TranscriptionEngine
 from engine.hardware import HardwareInfo, detect_hardware
 from engine.factory import create_engine
+from hallucination import filter_hallucinations
 from models import get_default_model, get_model, list_models
 
 DIST_DIR = Path(__file__).resolve().parent.parent / 'dist'
@@ -116,6 +117,13 @@ def _run_transcription(
             model_id=model_id,
             on_progress=on_progress,
         )
+        original_count = len(result.chunks)
+        filtered_chunks = filter_hallucinations(result.chunks)
+        dropped = original_count - len(filtered_chunks)
+        if dropped:
+            logger.info(f'Hallucination filter: dropped {dropped} of {original_count} chunks')
+        result.chunks = filtered_chunks
+        result.text = ''.join(c.get('text', '') for c in filtered_chunks)
         q.put(_sse_event('result', {
             **result.to_dict(),
             'hardware': hardware.device_type if hardware else 'unknown',

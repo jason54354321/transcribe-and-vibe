@@ -1,9 +1,7 @@
 ## Purpose
 
 Define the canonical requirements for audio transcription, including file intake, backend GPU transcription, model loading, progress reporting, and error handling.
-
 ## Requirements
-
 ### Requirement: Load audio file in browser
 The system SHALL accept audio files via drag-and-drop or file picker in the browser. The system SHALL accept MP3, WAV, M4A, and OGG formats by checking the file's MIME type. The system SHALL reject files exceeding 100MB with a user-visible error message. The audio file SHALL be uploaded to the local backend for transcription (instead of remaining in browser memory only).
 
@@ -62,3 +60,19 @@ The backend SHALL release a loaded transcription model's memory when the model i
 #### Scenario: faster-whisper model released after each transcription
 - **WHEN** a faster-whisper transcription completes, whether it succeeds or fails
 - **THEN** the model is released and garbage-collected before the next request
+
+### Requirement: Hallucination filtering before persistence
+The backend SHALL remove hallucinated word runs from the transcription result before it is persisted or returned, detecting them by local word density (words per second) rather than by repetition, so that contiguous runs whose timestamps imply a superhuman speaking rate are dropped while emphatic speech and song lyrics that repeat at human pace are preserved. Chunks without a numeric start timestamp SHALL be kept unchanged.
+
+#### Scenario: Superhuman-density run removed
+- **WHEN** the transcription result contains a contiguous run of words whose timestamps collapse into an impossible speaking rate (e.g. hundreds of words within a one-second window)
+- **THEN** the backend drops that run from the chunks and rebuilds the text before the result is persisted
+
+#### Scenario: Human-pace repetition preserved
+- **WHEN** the transcription result contains repeated words spoken at a human pace, such as emphatic repetition or song lyrics
+- **THEN** the backend keeps those words because density, not repetition, is the signal
+
+#### Scenario: Chunks without timestamps untouched
+- **WHEN** a chunk has no numeric start timestamp
+- **THEN** the filter keeps that chunk unchanged
+

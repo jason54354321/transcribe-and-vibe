@@ -89,4 +89,68 @@ test.describe('Vibe Transcription - English learning mode', () => {
     )
     expect(time).toBe(0)
   })
+
+  test('auto-pause status badge is visible and shows ON when learning mode is enabled', async ({
+    page,
+  }) => {
+    await page.locator('#learning-toggle').check()
+
+    const badge = page.locator('#auto-pause-status')
+    await expect(badge).toBeVisible()
+    await expect(badge).toContainText('ON')
+    await expect(badge).toHaveClass(/auto-pause-on/)
+  })
+
+  test("pressing 'w' toggles auto-pause from ON to OFF", async ({ page }) => {
+    await page.locator('#learning-toggle').check()
+
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement | null)?.blur()
+    })
+
+    const badge = page.locator('#auto-pause-status')
+    await expect(badge).toContainText('ON')
+
+    await page.keyboard.press('KeyW')
+    await expect(badge).toContainText('OFF')
+    await expect(badge).toHaveClass(/auto-pause-off/)
+  })
+
+  test('auto-pause badge is not visible when learning mode is off', async ({ page }) => {
+    const badge = page.locator('#auto-pause-status')
+    await expect(badge).not.toBeVisible()
+  })
+
+  test('audio does not pause at sentence end when auto-pause is OFF', async ({ page }) => {
+    await page.locator('#learning-toggle').check()
+
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement | null)?.blur()
+    })
+
+    // Disable auto-pause via keyboard shortcut
+    await page.keyboard.press('KeyW')
+    await expect(page.locator('#auto-pause-status')).toContainText('OFF')
+
+    const pauseCalled = await page.evaluate(async () => {
+      const audio = document.getElementById('audio-player') as HTMLAudioElement
+      let paused = false
+      const origPause = audio.pause.bind(audio)
+      audio.pause = () => {
+        paused = true
+        return origPause()
+      }
+
+      Object.defineProperty(audio, 'paused', { value: false, configurable: true })
+      audio.dispatchEvent(new Event('play'))
+
+      audio.currentTime = 1.4
+      audio.dispatchEvent(new Event('timeupdate'))
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      return paused
+    })
+
+    expect(pauseCalled).toBe(false)
+  })
 })

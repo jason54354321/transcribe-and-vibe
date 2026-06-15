@@ -48,6 +48,7 @@ const { currentTheme, toggleTheme, initializeTheme } = useTheme()
 const { audioUrl, isAudioStuck, hasAudioSource, revokeAudioUrl } = useStickyAudio()
 const isHighlightEnabled = ref(true)
 const isLearningEnabled = ref(false)
+const isAutoPauseEnabled = ref(true)
 
 const initializeHighlight = () => {
   const saved = localStorage.getItem('vibe-highlight')
@@ -63,12 +64,23 @@ const initializeLearning = () => {
   }
 }
 
+const initializeAutoPause = () => {
+  const saved = localStorage.getItem('vibe-auto-pause')
+  if (saved !== null) {
+    isAutoPauseEnabled.value = saved === 'true'
+  }
+}
+
 watch(isHighlightEnabled, (enabled) => {
   localStorage.setItem('vibe-highlight', String(enabled))
 })
 
 watch(isLearningEnabled, (enabled) => {
   localStorage.setItem('vibe-learning', String(enabled))
+})
+
+watch(isAutoPauseEnabled, (enabled) => {
+  localStorage.setItem('vibe-auto-pause', String(enabled))
 })
 
 const displayedResult = ref<TranscribeResult | null>(null)
@@ -105,6 +117,7 @@ const learning = useEnglishLearningMode({
   currentTimeMs: computed(() => audioPlayerRef.value?.currentTimeMs ?? 0),
   isPlaying: computed(() => audioPlayerRef.value?.isPlaying ?? false),
   isEnabled: isLearningEnabled,
+  isAutoPauseEnabled,
   seekTo: (ms) => audioPlayerRef.value?.seekTo(ms),
   pause: () => audioPlayerRef.value?.pause(),
 })
@@ -125,6 +138,9 @@ useKeyboardShortcuts(
     prevSentence: () => learning.prevSentence(),
     nextSentence: () => learning.nextSentence(),
     replaySentence: () => learning.replaySentence(),
+    toggleAutoPause: () => {
+      isAutoPauseEnabled.value = !isAutoPauseEnabled.value
+    },
   },
   hasAudioSource,
   isLearningEnabled,
@@ -216,6 +232,7 @@ onMounted(async () => {
   initializeTheme()
   initializeHighlight()
   initializeLearning()
+  initializeAutoPause()
 
   try {
     await initializeSessions()
@@ -312,6 +329,17 @@ onMounted(async () => {
     </main>
 
     <Transition name="hints-fade">
+      <div
+        v-show="isLearningEnabled && hasAudioSource"
+        id="auto-pause-status"
+        class="auto-pause-status"
+        :class="isAutoPauseEnabled ? 'auto-pause-on' : 'auto-pause-off'"
+      >
+        Auto-pause: {{ isAutoPauseEnabled ? 'ON' : 'OFF' }}
+      </div>
+    </Transition>
+
+    <Transition name="hints-fade">
       <div v-show="hasAudioSource" class="keyboard-hints" id="keyboard-hints">
         <kbd>Space</kbd> play/pause
         <span class="hint-sep">·</span>
@@ -323,6 +351,8 @@ onMounted(async () => {
           <kbd>A</kbd><kbd>D</kbd> prev/next sentence
           <span class="hint-sep">·</span>
           <kbd>S</kbd> replay
+          <span class="hint-sep">·</span>
+          <kbd>W</kbd> auto-pause
         </template>
       </div>
     </Transition>
@@ -675,6 +705,29 @@ h1 {
 .keyboard-hints .hint-sep {
   color: var(--border-color);
   font-weight: 700;
+}
+
+.auto-pause-status {
+  position: fixed;
+  bottom: calc(var(--spacing-unit) + 44px);
+  right: var(--spacing-unit);
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--secondary-text);
+  background: var(--sticky-bg);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.auto-pause-status.auto-pause-on {
+  color: var(--accent-color);
+  border-color: var(--accent-soft-border);
 }
 
 .hints-fade-enter-active,

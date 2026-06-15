@@ -8,6 +8,7 @@ type AudioPlayerApi = {
   prevSentence?: () => void
   nextSentence?: () => void
   replaySentence?: () => void
+  toggleAutoPause?: () => void
 }
 
 const INTERACTIVE_SELECTORS = 'input, textarea, select, button, [contenteditable]'
@@ -34,6 +35,10 @@ export function useKeyboardShortcuts(
         case 'KeyS':
           e.preventDefault()
           api.replaySentence?.()
+          return
+        case 'KeyW':
+          e.preventDefault()
+          api.toggleAutoPause?.()
           return
       }
     }

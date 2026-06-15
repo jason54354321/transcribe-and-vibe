@@ -9,6 +9,7 @@ type LearningModeOptions = {
   currentTimeMs: Ref<number>
   isPlaying: Ref<boolean>
   isEnabled: Ref<boolean>
+  isAutoPauseEnabled: Ref<boolean>
   seekTo: (ms: number) => void
   pause: () => void
 }
@@ -41,7 +42,9 @@ export function useEnglishLearningMode(opts: LearningModeOptions) {
       if (index < 0) return
       const sentence = sentences.value[index]
       if (time >= sentence.endMs && pausedForIndex !== index) {
-        opts.pause()
+        if (opts.isAutoPauseEnabled.value) {
+          opts.pause()
+        }
         pausedForIndex = index
       }
     },

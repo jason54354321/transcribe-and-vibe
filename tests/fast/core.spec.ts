@@ -171,5 +171,22 @@ test.describe('Vibe Transcription - Fast Loop', () => {
 
       await expect(page.locator('#meta-info')).toHaveText('8 words · 0m 3s')
     })
+
+    test('word span textContent has no leading or trailing space', async ({ page }) => {
+      await uploadTestAudio(page)
+      await expect(page.locator('#transcript-container')).toBeVisible()
+
+      const wordTexts = await page.locator('.word').evaluateAll((spans) =>
+        spans.map((s) => s.textContent ?? ''),
+      )
+
+      for (const text of wordTexts) {
+        expect(text).toBe(text.trim())
+      }
+
+      // spaces between words still render — the paragraph text contains spaces
+      const paraText = await page.locator('#transcript-content > p').first().textContent()
+      expect(paraText).toMatch(/\s/)
+    })
   })
 })
