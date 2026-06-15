@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import gc
 import logging
 import platform
+import threading
+import time
 from collections.abc import Mapping
 
 from engine import TranscribeResult, TranscriptionEngine, ProgressCallback
@@ -11,8 +14,51 @@ from models import MLX_REPOS, get_model
 
 logger = logging.getLogger(__name__)
 
+_IDLE_TTL_SEC = 60.0
+
 
 class MlxWhisperEngine(TranscriptionEngine):
+    def __init__(self) -> None:
+        self._idle_lock = threading.Lock()
+        self._idle_timer: threading.Timer | None = None
+        self._active = 0
+
+    def _begin_use(self) -> None:
+        with self._idle_lock:
+            if self._idle_timer is not None:
+                self._idle_timer.cancel()
+                self._idle_timer = None
+            self._active += 1
+
+    def _end_use(self) -> None:
+        with self._idle_lock:
+            self._active = max(0, self._active - 1)
+            if self._active == 0:
+                self._idle_timer = threading.Timer(_IDLE_TTL_SEC, self._on_idle)
+                self._idle_timer.daemon = True
+                self._idle_timer.start()
+
+    def _on_idle(self) -> None:
+        with self._idle_lock:
+            if self._active > 0:
+                return
+            self._idle_timer = None
+            self._release_model()
+
+    def _release_model(self) -> None:
+        import mlx.core as mx
+        from mlx_whisper.transcribe import ModelHolder
+
+        if ModelHolder.model is None:
+            return
+        t0 = time.perf_counter()
+        ModelHolder.model = None
+        ModelHolder.model_path = None
+        gc.collect()
+        # MLX keeps freed buffers in a process-wide cache; clearing it returns the memory to the OS
+        mx.clear_cache()
+        logger.info(f'MLX model released after idle in {time.perf_counter() - t0:.2f}s')
+
     def engine_name(self) -> str:
         return 'mlx-whisper'
 
@@ -34,8 +80,6 @@ class MlxWhisperEngine(TranscriptionEngine):
         model_id: str,
         on_progress: ProgressCallback | None = None,
     ) -> TranscribeResult:
-        import mlx_whisper
-
         config = get_model(model_id)
         repo = MLX_REPOS.get(model_id)
         dtype = config.default_compute_type
@@ -55,6 +99,22 @@ class MlxWhisperEngine(TranscriptionEngine):
 
         if on_progress:
             on_progress('transcribing', {'status': 'Transcribing...'})
+
+        self._begin_use()
+        try:
+            return self._transcribe(audio_path, repo, model_id, dtype, on_progress)
+        finally:
+            self._end_use()
+
+    def _transcribe(
+        self,
+        audio_path: str,
+        repo: str,
+        model_id: str,
+        dtype: str,
+        on_progress: ProgressCallback | None,
+    ) -> TranscribeResult:
+        import mlx_whisper
 
         result_data: Mapping[str, object] = mlx_whisper.transcribe(
             audio_path,
